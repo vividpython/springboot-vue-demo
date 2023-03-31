@@ -27,7 +27,7 @@ public class DrawingController {
 
     // 删除单个图纸信息
     @DeleteMapping("{id}")
-    public Result<?> deleteUser(@PathVariable(value = "id") Integer id) {
+    public Result<?> deleteDrawing(@PathVariable(value = "id") Integer id) {
         return drawingService.deleteDrawing(id);
     }
     // 编辑图纸信息
