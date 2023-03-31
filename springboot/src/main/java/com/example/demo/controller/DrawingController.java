@@ -41,7 +41,7 @@ public class DrawingController {
                           @PathVariable(value = "size") Integer size,
                           @RequestBody(required = true) DrawingQueryParam drawingQueryParam) {
 
-        Result<Drawing> result=  drawingService.findDrawingList(index, size, drawingQueryParam);
+        Result<?> result=  drawingService.findDrawingList(index, size, drawingQueryParam);
         System.out.println("this is pull test code...");
         return result;
     }
