@@ -42,7 +42,6 @@ public class DrawingController {
                           @RequestBody(required = true) DrawingQueryParam drawingQueryParam) {
 
         Result<Drawing> result=  drawingService.findDrawingList(index, size, drawingQueryParam);
-        System.out.println("this is master branch");
         return result;
     }
     //根据料号查询
