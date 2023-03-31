@@ -24,7 +24,7 @@ public class DrawingController {
     public Result<?> save(@RequestBody Drawing drawing) {
         return drawingService.insertDrawing(drawing);
     }
-    //this is firstVersion
+    //此处测试合并代码
     // 删除单个图纸信息
     @DeleteMapping("{id}")
     public Result<?> deleteDrawing(@PathVariable(value = "id") Integer id) {
