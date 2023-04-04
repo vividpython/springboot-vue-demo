@@ -3,6 +3,16 @@ package com.example.demo.common;
 public class DrawingQueryParam {
     // 料号
     private String productNo;
+    //项目号
+    private String itemNo;
+
+    public String getItemNo() {
+        return itemNo;
+    }
+
+    public void setItemNo(String itemNo) {
+        this.itemNo = itemNo;
+    }
 
     // 图纸名称
     private String drawingName;

@@ -42,6 +42,15 @@ request.interceptors.response.use(
         return res;
     },
     error => {
+        // 判断是否是401错误
+        if (error.response && error.response.status === 401) {
+            router.push('/login') // 跳转到登录页
+            // // 跳转到登录页，保存当前页面路径
+            // router.replace({
+            //     path: '/login',
+            //     query: { redirect: router.currentRoute.fullPath }
+            // })
+        }
         console.log('err' + error) // for debug
         return Promise.reject(error)
     }

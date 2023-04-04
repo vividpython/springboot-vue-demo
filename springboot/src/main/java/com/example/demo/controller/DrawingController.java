@@ -22,19 +22,24 @@ public class DrawingController {
     //新增图纸信息
     @PostMapping
     public Result<?> save(@RequestBody Drawing drawing) {
+
         return drawingService.insertDrawing(drawing);
     }
-    //此处测试合并代码
+
     // 删除单个图纸信息
     @DeleteMapping("{id}")
     public Result<?> deleteDrawing(@PathVariable(value = "id") Integer id) {
         return drawingService.deleteDrawing(id);
     }
+
+
     // 编辑图纸信息
     @PutMapping("")
     public Result<?> modifyDrawing(@RequestBody Drawing drawing) {
         return drawingService.modifyDrawing(drawing);
     }
+
+
     // 查询图纸信息列表
     @PostMapping("{index}/{size}")
     public Result<?> findDrawingList(@PathVariable(value = "index") Integer index,
@@ -45,6 +50,15 @@ public class DrawingController {
         System.out.println("this is pull test code...");
         return result;
     }
+
+
+    // 根据用户编号查询用户信息
+    @GetMapping("{id}")
+    public Result<?> getDrawingInfo(@PathVariable(value = "id") Integer id) {
+        return drawingService.getDrawingById(id);
+    }
+
+
     //根据料号查询
     @GetMapping("/getFilePath")
     public Result<?> getFilePath(@RequestParam String productNo) {

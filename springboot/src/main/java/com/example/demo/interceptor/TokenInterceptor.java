@@ -43,7 +43,6 @@ public class TokenInterceptor extends HandlerInterceptorAdapter {
             }
         }catch (Exception e){
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.sendRedirect("/login");
             return false;
         }
 

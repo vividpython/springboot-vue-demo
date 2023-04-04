@@ -14,6 +14,9 @@
                     <if test="drawingQueryParam.productNo != null and drawingQueryParam.productNo != ''">
                         and product_no like CONCAT('%',#{drawingQueryParam.productNo}, '%')
                     </if>
+                    <if test="drawingQueryParam.itemNo != null and drawingQueryParam.itemNo != ''">
+                        and item_no like CONCAT('%',#{drawingQueryParam.itemNo}, '%')
+                    </if>
                     <if test="drawingQueryParam.drawingName != null and drawingQueryParam.drawingName != ''">
                         and drawing_name like CONCAT('%',#{drawingQueryParam.drawingName}, '%')
                     </if>

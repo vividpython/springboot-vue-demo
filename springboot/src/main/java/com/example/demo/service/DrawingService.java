@@ -27,7 +27,7 @@ public interface DrawingService extends IService<Drawing> {
 
     Result<?> deleteDrawing(Integer id);
 
-    Result<?> getOneDrawing(Drawing drawing);
+    Result<?> getDrawingById(Integer id);
 
     Result<?> getFilePath(String productNo);
 }

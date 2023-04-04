@@ -44,6 +44,7 @@
     >
       <el-table-column prop="id" label="ID" sortable/>
       <el-table-column prop="productNo" label="产品料号"/>
+      <el-table-column prop="itemNo" label="项目编号"/>
       <el-table-column prop="drawingName" label="图纸名称"/>
       <el-table-column prop="drawingType" label="图纸类型">
         <template #default="scope">
@@ -53,10 +54,14 @@
       <el-table-column prop="drawingPath" label="存储路径"/>
       <el-table-column prop="createTime" label="创建时间" />
       <el-table-column prop="updateTime" label="更新时间"/>
-      <el-table-column fixed="right" label="操作" width="170">
+      <el-table-column fixed="right" label="操作" width="220">
         <template #default="scope">
           <el-button size="small" @click="handleEdit(scope.row)"
           >编辑
+          </el-button
+          >
+          <el-button size="small" @click="previewFile(scope.row)"
+          >预览
           </el-button
           >
           <el-popconfirm title="Are you sure to delete this?" @confirm="handleDelete(scope.row.id,scope.row.drawingPath)">
@@ -84,6 +89,9 @@
       <el-form :model="form" label-width="120px">
         <el-form-item label="产品料号">
           <el-input v-model="form.productNo" style="width: 80%"/>
+        </el-form-item>
+        <el-form-item label="项目编号">
+          <el-input v-model="form.itemNo" style="width: 80%"/>
         </el-form-item>
         <el-form-item label="图纸名称">
           <el-input v-model="form.drawingName" style="width: 80%"/>
@@ -134,14 +142,16 @@ import request from "@/utils/request";
 import {ElMessage} from "element-plus";
 import * as XLSX from 'xlsx';
 import * as FileSaver from 'file-saver';
-
+import { Base64 } from "js-base64";
 
 export default {
   name: 'Drawing',
   components: {},
   data() {
     return {
+      previewUrl:'',
       form:{},
+      previewForm:{},
       formInline:{},
       search: '',
       currentPage: 1,
@@ -190,6 +200,7 @@ export default {
           return ''
       }
     },
+
     filesUploadSuccess(res){
      this.form.drawingPath = res.data;
     },
@@ -206,7 +217,10 @@ export default {
         request.post(`/drawing/${this.currentPage}/${this.pageSize}`,JSON.parse(JSON.stringify(this.formInline))
         ).then(res => {
           console.log(res);
-          this.tableData = res.data.records;
+          this.tableData = res.data.records.map(record => {
+            const fileName = record.drawingPath.split('_').pop();
+            return { ...record, drawingPath: fileName };
+          });
           this.total = res.data.total;
 
 
@@ -317,6 +331,26 @@ export default {
         this.$refs["upload"].clearFiles();
       })
       //编辑记录的时候 如果重新上传了文件 要删除掉原文件
+    },
+    previewFile(row){
+      this.form = JSON.parse(JSON.stringify(row));
+
+      request.get("/drawing/" + this.form.id).then(res=>{
+        console.log(res);
+        if (res.code === '0'){
+
+          //查询成功之后 开始进行调用预览
+          this.previewUrl = "http://"  + res.data.drawingPath;
+          console.log(this.previewUrl);
+          window.open('http://127.0.0.1:8012/onlinePreview?url='+encodeURIComponent(Base64.encode(this.previewUrl)));
+        }else {
+          ElMessage({
+            message: '预览失败',
+            type: 'error',
+          })
+        }
+      });
+
     },
     handleSizeChange() {
       this.load()

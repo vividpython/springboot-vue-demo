@@ -6,9 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.example.demo.common.JwtConfig;
-import com.example.demo.common.Result;
-import com.example.demo.common.UserQueryParam;
+import com.example.demo.common.*;
 import com.example.demo.entity.User;
 import com.example.demo.mapper.UserMapper;
 import com.example.demo.service.UserService;
@@ -73,6 +71,7 @@ public class UserController {
     //    return userService.getOneUser(user);
     //}
     @PostMapping("/login")
+    @MyLog(title = "登录", optParam = "#{userName},#{password}", businessType = BusinessType.OTHER)
     public Result<?> login(@RequestBody User user) {
         JSONObject json = new JSONObject();
 

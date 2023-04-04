@@ -81,19 +81,11 @@ public class DrawingServiceImpl extends ServiceImpl<DrawingMapper,Drawing> imple
     }
 
     @Override
-    public Result<?> getOneDrawing(Drawing drawing) {
-        if (drawing == null || drawing.getProductNo() == null || drawing.getDrawingType() == null) {
-            return Result.error("201", "参数错误");
-        }
-        // 用户名
-        QueryWrapper<Drawing> wrapper = new QueryWrapper<>();
-        wrapper.eq("username", drawing.getProductNo());
-        wrapper.eq("password", drawing.getDrawingType());
-        Drawing res =  this.baseMapper.selectOne(wrapper);
-        if (res == null){
-            return Result.error("201","用户名或密码错误");
-        }
-        return Result.success(res);
+    public Result<?> getDrawingById(Integer id) {
+        if (id == null || id <= 0)
+            return Result.error("202","参数错误");
+
+        return Result.success(this.baseMapper.selectById(id));
     }
 
     @Override
