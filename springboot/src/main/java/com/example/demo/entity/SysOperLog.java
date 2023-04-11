@@ -1,4 +1,4 @@
-package com.example.demo.common;
+package com.example.demo.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -28,7 +28,7 @@ public class SysOperLog implements Serializable {
     private String title;
 
 
-    private String optParam;
+    private String operParam;
 
 
     private Integer businessType;
@@ -43,5 +43,9 @@ public class SysOperLog implements Serializable {
     private String errorMsg;
 
     private Date operTime;
+
+    private String operCreator;
+
+    private Integer operId;
 }
 

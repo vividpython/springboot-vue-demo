@@ -1,22 +1,17 @@
 package com.example.demo.controller;
 
-import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
-import com.baomidou.mybatisplus.core.conditions.Wrapper;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.demo.common.*;
 import com.example.demo.entity.User;
 import com.example.demo.mapper.UserMapper;
 import com.example.demo.service.UserService;
+import com.example.demo.utils.ThreadLocalUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.util.HashMap;
-import java.util.Map;
+
 import java.util.Objects;
 
 @RestController
@@ -30,6 +25,7 @@ public class UserController {
 
     //新增用户
     @PostMapping
+    @MyLog(title = "新增用户", operParam = "#{user}", businessType = BusinessType.INSERT)
     public Result<?> save(@RequestBody User user) {
         return userService.insertUser(user);
     }
@@ -37,16 +33,19 @@ public class UserController {
 
     // 删除单个用户
     @DeleteMapping("{id}")
+    @MyLog(title = "删除用户", operParam = "#{id}", businessType = BusinessType.DELETE)
     public Result<?> deleteUser(@PathVariable(value = "id") Integer id) {
         return userService.deleteUser(id);
     }
     // 编辑用户
     @PutMapping("")
+    @MyLog(title = "编辑用户", operParam = "#{user}", businessType = BusinessType.UPDATE)
     public Result<?> modifyUser(@RequestBody User user) {
         return userService.modifyUser(user);
     }
     // 查询用户列表
     @PostMapping("{index}/{size}")
+
     public Result<?> findUserList(@PathVariable(value = "index") Integer index,
                           @PathVariable(value = "size") Integer size,
                           @RequestBody(required = true) UserQueryParam userQueryParam) {
@@ -71,7 +70,7 @@ public class UserController {
     //    return userService.getOneUser(user);
     //}
     @PostMapping("/login")
-    @MyLog(title = "登录", optParam = "#{userName},#{password}", businessType = BusinessType.OTHER)
+    @MyLog(title = "登录", operParam = "#{user.username},#{user.password}", businessType = BusinessType.OTHER)
     public Result<?> login(@RequestBody User user) {
         JSONObject json = new JSONObject();
 
@@ -82,7 +81,9 @@ public class UserController {
         }else {
             User res = (User)oneUser.getData();
             Integer userId = res.getId();
+            ThreadLocalUtils.set("userId",userId);
             String token = jwtConfig.createToken(userId);
+
             if (!StringUtils.isEmpty(token)) {
                 json.put("token", token);
             }

@@ -3,7 +3,13 @@ package com.example.demo.common;
 import com.alibaba.fastjson.JSONObject;
 
 //import iot.sixiang.license.jwt.UserUtils;
+import com.example.demo.controller.TokenController;
+import com.example.demo.entity.SysOperLog;
+import com.example.demo.entity.User;
 import com.example.demo.service.SysOperLogService ;
+import com.example.demo.service.UserService;
+import com.example.demo.utils.ThreadLocalUtils;
+import io.jsonwebtoken.Jwts;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.Signature;
@@ -13,8 +19,14 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Method;
 import java.util.Date;
 import java.util.HashMap;
@@ -29,7 +41,10 @@ public class LogAspect {
      */
     @Autowired
     private SysOperLogService sysOperLogService;
-
+    @Resource
+    UserService userService;
+    @Value("${jwt.secret}")
+    private String secret;
     /**
      * @annotation(MyLog类的路径) 在idea中，右键自定义的MyLog类-> 点击Copy Reference
      */
@@ -69,24 +84,60 @@ public class LogAspect {
         SysOperLog operLog = new SysOperLog();
         // 操作状态（0正常 1异常）
         operLog.setStatus(0);
+
+        //获取请求地址
+        HttpServletRequest request = getHttpServletRequest();
+        operLog.setUri(request.getServletPath());
+        //if (request.getServletPath().equals("/user/login")) {
+        //    JSONObject jsonObject = JSONObject.parseObject(getAnnotationValue(joinPoint, controllerLog.operParam()));
+        //    //写入线程缓存
+        //    ThreadLocalUtils.set("userId",Integer.parseInt(jsonObject.getString("username")));
+        //}
+        //if (ThreadLocalUtils.getCache("userId") != null){
+        //    Integer userId = (Integer)ThreadLocalUtils.getCache("userId");
+        //    operLog.setOperCreator(userService.getUserInfolog(userId).getUsername());
+        //    operLog.setOperId(userService.getUserInfolog(userId).getId());
+        //}else {
+        //    operLog.setOperCreator("null");
+        //    operLog.setOperId(-1);
+        //}
+        operLog.setOperCreator("null");
+        operLog.setOperId(-1);
+        //获取请求头中的token
+        //String token = request.getHeader("token"); // 获取请求头中的token字段
+        //if (token != null){
+        //    Jwts.parser().setSigningKey(secret).parseClaimsJws(token).getBody();
+        //}else{
+        //    System.out.println("token为空");
+        //}
+
         // 操作时间
         operLog.setOperTime(new Date());
         if (e != null) {
             operLog.setStatus(1);
             // IotLicenseException为本系统自定义的异常类，读者若要获取异常信息，请根据自身情况变通
-            //operLog.setErrorMsg(StringUtils.substring(((IotLicenseException) e).getMsg(), 0, 2000));
+            operLog.setErrorMsg(e.toString());
         }
 
         // UserUtils.getUri();获取方法上的路径 如：/login，本文实现方法如下：
         // 1、在拦截器中 String uri = request.getRequestURI();
         // 2、用ThreadLocal存放uri，UserUtils.setUri(uri);
         // 3、UserUtils.getUri();
-        String uri = "";
-        operLog.setUri(uri);
+        //String uri = "";
+        //operLog.setUri(uri);
         // 处理注解上的参数
         getControllerMethodDescription(joinPoint, controllerLog, operLog);
         // 保存数据库
-        sysOperLogService.insertSysLog(operLog.getTitle(), operLog.getBusinessType(), operLog.getUri(), operLog.getStatus(), operLog.getOptParam(), operLog.getErrorMsg(), operLog.getOperTime());
+        sysOperLogService.insertSysLog(operLog.getTitle(), operLog.getBusinessType(), operLog.getUri(), operLog.getStatus(), operLog.getOperParam(), operLog.getErrorMsg(), operLog.getOperTime(), operLog.getOperCreator(),operLog.getOperId());
+    }
+    /**
+     * @Description: 获取request
+     */
+    public HttpServletRequest getHttpServletRequest(){
+        RequestAttributes ra = RequestContextHolder.getRequestAttributes();
+        ServletRequestAttributes sra = (ServletRequestAttributes)ra;
+        HttpServletRequest request = sra.getRequest();
+        return request;
     }
 
     /**
@@ -116,8 +167,8 @@ public class LogAspect {
         // 设置模块标题，eg:登录
         operLog.setTitle(myLog.title());
         // 对方法上的参数进行处理，处理完：userName=xxx,password=xxx
-        String optParam = getAnnotationValue(joinPoint, myLog.optParam());
-        operLog.setOptParam(optParam);
+        String operParam = getAnnotationValue(joinPoint, myLog.operParam());
+        operLog.setOperParam(operParam);
 
     }
 
@@ -143,8 +194,8 @@ public class LogAspect {
                 // 转换为JsonObject
                 JSONObject jsonObject = (JSONObject) JSONObject.toJSON(object);
                 // 获取值
-                Object o = jsonObject.get(split[1]);
-                return String.valueOf(o);
+                //Object o = jsonObject.get(split[1]);
+                return String.valueOf(jsonObject);
             } else {// 简单的动态参数直接返回
                 StringBuilder str = new StringBuilder();
                 String[] paraNames = paramName.split(",");

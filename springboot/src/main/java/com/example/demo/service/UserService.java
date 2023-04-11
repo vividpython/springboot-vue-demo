@@ -28,4 +28,6 @@ public interface UserService extends IService<User> {
     Result<?> getOneUser(User user);
 
     Result<?> getUserInfoById(Integer id);
+
+    User getUserInfolog(Integer id);
 }

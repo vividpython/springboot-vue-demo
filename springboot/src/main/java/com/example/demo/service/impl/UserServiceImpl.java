@@ -99,4 +99,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper,User> implements Use
             return Result.success(this.baseMapper.selectById(id));
         }
 
+    @Override
+    public User getUserInfolog(Integer id) {
+        if (id == null || id <= 0) return null;
+        User res =  this.baseMapper.selectById(id);
+        return res;
+    }
+
 }
