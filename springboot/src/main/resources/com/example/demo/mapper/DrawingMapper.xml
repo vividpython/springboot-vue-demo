@@ -7,9 +7,12 @@
         <!-- 查询图纸列表（带多条件） -->
         <select id="findDrawingList" resultType="com.example.demo.entity.Drawing">
             select *
+            from drawing d1
+            where id in (
+            select max(id)
             from drawing
-            <where>
-                1 = 1
+            group by product_no, item_no, drawing_type, drawing_name
+            )
                 <if test="drawingQueryParam != null">
                     <if test="drawingQueryParam.productNo != null and drawingQueryParam.productNo != ''">
                         and product_no like CONCAT('%',#{drawingQueryParam.productNo}, '%')
@@ -27,11 +30,31 @@
                         and drawing_path like CONCAT('%',#{drawingQueryParam.drawingPath}, '%')
                     </if>
                 </if>
-            </where>
         </select>
     <select id="findDrawingListByPN" resultType="com.example.demo.entity.Drawing">
         select *
         from drawing where product_no =  #{product_no}
+    </select>
+    <select id="findHistoryList" resultType="com.example.demo.entity.Drawing">
+        SELECT *
+        FROM drawing
+        WHERE product_no = #{drawing.productNo}
+        AND drawing_name = #{drawing.drawingName}
+        AND drawing_type = #{drawing.drawingType}
+        AND drawing_version &lt;&gt; #{drawing.drawingVersion}
+        <if test="drawing.itemNo == null">
+            AND item_no IS NULL
+        </if>
+        <if test="drawing.itemNo != null">
+            AND item_no = #{drawing.itemNo}
+        </if>
+    </select>
+    <select id="findDrawingMore" parameterType="java.util.List"
+            resultType="com.example.demo.entity.Drawing">
+        SELECT * FROM drawing WHERE id IN
+        <foreach collection="ids" index="index" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
     </select>
 </mapper>
 

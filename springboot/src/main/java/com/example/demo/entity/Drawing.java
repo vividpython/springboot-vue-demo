@@ -23,4 +23,7 @@ public class Drawing {
     private Date updateTime;
 
     private String itemNo;
+
+    private String drawingVersion;
+
 }

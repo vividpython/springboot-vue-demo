@@ -5,7 +5,9 @@ import com.example.demo.common.Result;
 
 import com.example.demo.entity.Drawing;
 
-import com.example.demo.mapper.DrawingMapper;
+import com.example.demo.entity.DrawingEditForm;
+import com.example.demo.entity.EditDrawing;
+
 
 import com.example.demo.service.DrawingService;
 
@@ -31,12 +33,21 @@ public class DrawingController {
     public Result<?> deleteDrawing(@PathVariable(value = "id") Integer id) {
         return drawingService.deleteDrawing(id);
     }
-
+    // 删除多个图纸
+    @PostMapping("/deleteBatch")
+    public Result<?> deleteDrawingMore(@RequestBody List<Integer> ids) {
+        return drawingService.deleteDrawingMore(ids);
+    }
 
     // 编辑图纸信息
-    @PutMapping("")
-    public Result<?> modifyDrawing(@RequestBody Drawing drawing) {
-        return drawingService.modifyDrawing(drawing);
+    @PostMapping(value = "/edit")
+    public Result<?> modifyDrawing(@RequestBody DrawingEditForm form) {
+        //如果某一个图纸的图纸类型或者文件名发生了变化 需要联动地更改这个图纸的其他版本的图纸类型
+        Drawing drawing = form.getDrawing();
+        EditDrawing editForm = form.getEditDrawing();
+        System.out.println(drawing);
+        System.out.println(editForm);
+        return drawingService.modifyDrawing(drawing,editForm);
     }
 
 
@@ -50,6 +61,17 @@ public class DrawingController {
         System.out.println("this is pull test code...");
         return result;
     }
+    //
+    @PostMapping("/historyList/{index}/{size}")
+    public Result<?> findHistoryList(@PathVariable(value = "index") Integer index,
+                                     @PathVariable(value = "size") Integer size,
+                                     @RequestBody(required = true) Drawing drawing) {
+
+        Result<?> result=  drawingService.findHistoryList(index, size, drawing);
+        System.out.println("this is pull test code...");
+        return result;
+    }
+
 
 
     // 根据用户编号查询用户信息
