@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demo.mapper.DocumentMapper">
+    <select id="findDocumentList" resultType="com.example.demo.entity.Document"></select>
+    <select id="findDocumentListByPN" resultType="com.example.demo.entity.Document"></select>
+    <select id="findHistoryList" resultType="com.example.demo.entity.Document"></select>
+    <select id="findDocumentMore" resultType="com.example.demo.entity.Document"></select>
+</mapper>
+
+
+
+

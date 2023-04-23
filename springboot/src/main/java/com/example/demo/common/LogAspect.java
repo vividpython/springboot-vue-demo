@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSONObject;
 
 //import iot.sixiang.license.jwt.UserUtils;
 import com.example.demo.controller.TokenController;
+import com.example.demo.controller.UserController;
 import com.example.demo.entity.SysOperLog;
 import com.example.demo.entity.User;
 import com.example.demo.service.SysOperLogService ;
@@ -20,6 +21,7 @@ import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -27,10 +29,12 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 import java.lang.reflect.Method;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+
 
 @Aspect
 @Component
@@ -88,12 +92,12 @@ public class LogAspect {
         //获取请求地址
         HttpServletRequest request = getHttpServletRequest();
         operLog.setUri(request.getServletPath());
-        //if (request.getServletPath().equals("/user/login")) {
-        //    JSONObject jsonObject = JSONObject.parseObject(getAnnotationValue(joinPoint, controllerLog.operParam()));
-        //    //写入线程缓存
-        //    ThreadLocalUtils.set("userId",Integer.parseInt(jsonObject.getString("username")));
-        //}
+
+        // 在 MyLog 切面中打印当前线程 ID 和存储的 userId 值
+        System.out.println("Thread ID: " + Thread.currentThread().getId());
+        //登录成功之后userId就已经存入了线程缓存
         //if (ThreadLocalUtils.getCache("userId") != null){
+        //
         //    Integer userId = (Integer)ThreadLocalUtils.getCache("userId");
         //    operLog.setOperCreator(userService.getUserInfolog(userId).getUsername());
         //    operLog.setOperId(userService.getUserInfolog(userId).getId());
@@ -101,8 +105,12 @@ public class LogAspect {
         //    operLog.setOperCreator("null");
         //    operLog.setOperId(-1);
         //}
-        operLog.setOperCreator("null");
-        operLog.setOperId(-1);
+        HttpSession session = request.getSession();
+        Integer userId = (Integer) session.getAttribute("userId");
+        operLog.setOperCreator(userService.getUserInfolog(userId).getUsername());
+        operLog.setOperId(userService.getUserInfolog(userId).getId());
+        //operLog.setOperCreator("null");
+        //operLog.setOperId(-1);
         //获取请求头中的token
         //String token = request.getHeader("token"); // 获取请求头中的token字段
         //if (token != null){

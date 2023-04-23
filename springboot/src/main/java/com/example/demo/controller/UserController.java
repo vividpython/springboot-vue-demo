@@ -11,12 +11,14 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 
 import java.util.Objects;
 
 @RestController
 @RequestMapping("/user")
 public class UserController {
+
     @Resource
     UserService userService;
 
@@ -71,7 +73,7 @@ public class UserController {
     //}
     @PostMapping("/login")
     @MyLog(title = "登录", operParam = "#{user.username},#{user.password}", businessType = BusinessType.OTHER)
-    public Result<?> login(@RequestBody User user) {
+    public Result<?> login(@RequestBody User user, HttpSession session) {
         JSONObject json = new JSONObject();
 
         /** 验证userName，passWord和数据库中是否一致，如不一致，直接return ResultTool.errer(); 【这里省略该步骤】*/
@@ -82,6 +84,11 @@ public class UserController {
             User res = (User)oneUser.getData();
             Integer userId = res.getId();
             ThreadLocalUtils.set("userId",userId);
+
+            session.setAttribute("userId", userId);
+
+
+            // 打印当前线程 ID 和存储的 userId 值
             String token = jwtConfig.createToken(userId);
 
             if (!StringUtils.isEmpty(token)) {
@@ -97,6 +104,16 @@ public class UserController {
         // 这里模拟通过用户名和密码，从数据库查询userId
         // 这里把userId转为String类型，实际开发中如果subject需要存userId，则可以JwtConfig的createToken方法的参数设置为Long类型
     }
+
+    @PostMapping("/logout")
+    @MyLog(title = "退出登录", businessType = BusinessType.OTHER)
+    public Result<?> logout() {
+        // 注销用户认证信息
+        ThreadLocalUtils.removeByKey("userId");
+        // 构造响应数据
+        return Result.success();
+    }
+
     // 根据用户编号查询用户信息
     @GetMapping("{id}")
     public Result<?> getUserInfo(@PathVariable(value = "id") Integer id) {

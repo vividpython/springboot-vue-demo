@@ -2,7 +2,6 @@ package com.example.demo.interceptor;
 
 
 import com.example.demo.common.JwtConfig;
-import com.example.demo.utils.ThreadLocalUtils;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.SignatureException;
 import org.springframework.stereotype.Component;
@@ -40,10 +39,6 @@ public class TokenInterceptor extends HandlerInterceptorAdapter {
         Claims claims = null;
         try{
             claims = jwtConfig.getTokenClaim(token);
-            //根据解析token重新获取到id
-            //System.out.println("id:"+ Integer.parseInt(claims.getSubject()));
-            //写入线程缓存
-            //ThreadLocalUtils.set("userId",Integer.parseInt(claims.getSubject()));
             if(claims == null || jwtConfig.isTokenExpired(claims.getExpiration())){
                 throw new SignatureException(jwtConfig.getHeader() + "失效，请重新登录。");
             }

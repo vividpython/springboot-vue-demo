@@ -14,6 +14,7 @@
           <span  class="fontClass">系统管理</span>
         </template>
           <el-menu-item index="/user" v-if="user.role === 1">用户管理</el-menu-item>
+          <el-menu-item index="/document">项目文件</el-menu-item>
           <el-menu-item index="/drawing">生产图纸</el-menu-item>
           <el-menu-item index="/news">新闻管理</el-menu-item>
         <!--  <el-menu-item index="1-3">item three</el-menu-item>-->

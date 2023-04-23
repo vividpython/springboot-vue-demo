@@ -104,7 +104,7 @@ public class FileController {
         }
         // 根据信息创建对应的文件夹
         // 拼接文件夹路径
-        String folderPath = "/files/";
+        String folderPath = "/files";
         //判断一下项目号是否为空 如果为空 则表示标品 如果不为空则表示项目需要特殊产品
         if (StringUtils.isNotBlank(itemNo)) {
             //判断一下有没有项目号  有项目号创建项目号路径
@@ -121,7 +121,7 @@ public class FileController {
 
         // 构造返回数据
         Map<String, String> resultMap = new HashMap<>();
-        resultMap.put("filePath", ip + "/" + filePath);
+        resultMap.put("filePath", ip  + filePath);
         resultMap.put("newVersion", NewDrawingVersion);
 
         return Result.success(resultMap);
