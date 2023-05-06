@@ -41,7 +41,9 @@ public interface DocumentService extends IService<Document> {
     List<Document> findDocumentMore(List<Integer> ids);
 
 
-    Integer getMaxFileNumber(String projectId, Integer fileType);
+    Integer getMaxFileNumber(String ItemNo, String materialNo, Integer documentType);
 
-    Result<?> getFilePath(String itemNo, String materialNo);
+    Result<?> getFilePath(String itemNo, List<Integer> documentTypeList);
+
+    String getNowDocumentVersion(Integer id);
 }

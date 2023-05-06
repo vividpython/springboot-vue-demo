@@ -17,19 +17,22 @@ public class DocumentQueryParam {
         this.materialNo = materialNo;
     }
 
-    public Integer getFileType() {
-        return fileType;
-    }
 
-    public void setFileType(Integer fileType) {
-        this.fileType = fileType;
-    }
 
     //项目编号
     private String itemNo;
+
+    public Integer getDocumentType() {
+        return documentType;
+    }
+
+    public void setDocumentType(Integer documentType) {
+        this.documentType = documentType;
+    }
+
     // 项目料号
     private String materialNo;
     //文件类型
-    private Integer fileType;
+    private Integer documentType;
 
 }

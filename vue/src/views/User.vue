@@ -46,7 +46,8 @@
       <el-table-column  label="角色">
         <template #default="scope">
           <span v-if="scope.row.role === 1">管理员</span>
-          <span v-if="scope.row.role === 2">普通用户</span>
+          <span v-if="scope.row.role === 2">设计</span>
+          <span v-if="scope.row.role === 3">其他</span>
         </template>
       </el-table-column>
       <el-table-column  label="头像">
@@ -93,6 +94,9 @@
         </el-form-item>
         <el-form-item label="昵称">
           <el-input v-model="form.nickName" style="width: 80%"/>
+        </el-form-item>
+        <el-form-item label="角色">
+          <el-input v-model="form.role" style="width: 80%"/>
         </el-form-item>
         <el-form-item label="年龄">
           <el-input v-model="form.age" style="width: 80%"/>

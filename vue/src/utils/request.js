@@ -1,5 +1,6 @@
 import axios from 'axios'
 import router from "@/router";
+import {ElMessage} from "element-plus";
 
 const request = axios.create({
     baseURL: '/api',  // 注意！！ 这里是全局统一加上了 '/api' 前缀，也就是说所有接口都会加上'/api'前缀在，页面里面写接口的时候就不要加 '/api'了，否则会出现2个'/api'，类似 '/api/api/user'这样的报错，切记！！！
@@ -44,6 +45,10 @@ request.interceptors.response.use(
     error => {
         // 判断是否是401错误
         if (error.response && error.response.status === 401) {
+            ElMessage({
+                message: '无效的会话或者会话已过期，请重新登录',
+                type: 'warning',
+            })
             router.push('/login') // 跳转到登录页
             // // 跳转到登录页，保存当前页面路径
             // router.replace({

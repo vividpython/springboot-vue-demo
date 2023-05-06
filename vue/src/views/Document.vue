@@ -33,11 +33,11 @@
     </div>
     <!--批量操作按钮区域-->
     <div style="margin: 10px ; padding: 0px">
-      <el-button  type="primary" @click="handleDownLoadDrawings">批量下载</el-button>
+      <el-button type="primary" @click="handleDownLoadDrawings">批量下载</el-button>
       <el-popconfirm title="Are you sure to delete this?"
                      @confirm="handleDeleteDrawings">
         <template #reference>
-          <el-button type="danger" >批量删除</el-button>
+          <el-button type="danger" v-if="user.role !== 3">批量删除</el-button>
         </template>
       </el-popconfirm>
     </div>
@@ -50,18 +50,20 @@
         :stripe="false"
         @selection-change="handleSelectionChange"
     >
-      <el-table-column type="selection" width="55" />
+      <el-table-column type="selection" width="55"/>
       <el-table-column prop="id" label="ID" sortable/>
       <el-table-column prop="itemNo" label="项目编号"/>
       <el-table-column prop="materialNo" label="料号"/>
       <el-table-column prop="documentName" label="文件名称"/>
       <el-table-column prop="documentType" label="文件类型">
         <template #default="scope">
-          {{ getDrawingType(scope.row.documentType) }}
+          {{ getDocumentType(scope.row.documentType) }}
         </template>
       </el-table-column>
       <el-table-column prop="sequenceNo" label="文件序号"/>
-      <el-table-column prop="documentPath" label="文件路径"/>
+      <el-table-column prop="documentVersion" label="文件版本"/>
+      <el-table-column prop="documentPath" label="文件路径" :min-width="200" :ellipsis="true"
+                       style="white-space: nowrap; word-break: break-all;"/>
       <el-table-column prop="createTime" label="创建时间"/>
       <el-table-column prop="updateTime" label="更新时间"/>
       <el-table-column fixed="right" label="操作" width="220">
@@ -72,19 +74,19 @@
               >预览
               </el-button
               >
-              <el-button size="small" @click="downloadFile(scope.row)">下载文件</el-button>
-            </div>
-            <div class="col">
-              <el-button size="small" @click="updateVersion(scope.row)"
+              <el-button size="small" v-if="user.role !== 3" @click="updateVersion(scope.row)"
               >更新
               </el-button
               >
               <el-popconfirm title="Are you sure to delete this?"
                              @confirm="handleDelete(scope.row.id,scope.row.documentPath)">
                 <template #reference>
-                  <el-button type="danger" size="small">删除</el-button>
+                  <el-button type="danger" size="small" v-if="user.role !== 3">删除</el-button>
                 </template>
               </el-popconfirm>
+            </div>
+            <div class="col">
+              <el-button size="small" @click="downloadFile(scope.row)">下载文件</el-button>
               <el-button size="small" @click="showHistory(scope.row)">历史版本</el-button>
             </div>
           </div>
@@ -159,7 +161,7 @@
     <el-dialog v-model="updatedDialogVisible" title="Tips" width="50%" :before-close="handleCloseUpdateDialog">
       <el-form :model="form" label-width="120px">
         <el-form-item label="选择文件">
-          <el-upload ref="updateDrawing"
+          <el-upload ref="updateDocument"
                      :auto-upload="false"
                      :http-request="updateFile">
             <template #trigger>
@@ -189,7 +191,8 @@
     </el-dialog>
 
     <!--查看历史版本对话框-->
-    <el-dialog v-model="historyDialogVisible" title="Tips" width="80%" :close-on-click-modal="false" :before-close="handleDialogHisClose">
+    <el-dialog v-model="historyDialogVisible" title="Tips" width="80%" :close-on-click-modal="false"
+               :before-close="handleDialogHisClose">
       <el-table
           :data="historyTableData"
           style="width: 100%"
@@ -197,14 +200,14 @@
           class="table"
           :stripe="false"
       >
-        <el-table-column type="selection" width="55" />
+        <el-table-column type="selection" width="55"/>
         <el-table-column prop="id" label="ID" sortable/>
         <el-table-column prop="itemNo" label="项目编号"/>
         <el-table-column prop="materialNo" label="料号"/>
         <el-table-column prop="documentName" label="文件名称"/>
         <el-table-column prop="documentType" label="文件类型">
           <template #default="scope">
-            {{ getDrawingType(scope.row.documentType) }}
+            {{ getDocumentType(scope.row.documentType) }}
           </template>
         </el-table-column>
         <el-table-column prop="sequenceNo" label="文件序号"/>
@@ -225,7 +228,7 @@
                 <el-popconfirm title="Are you sure to delete this?"
                                @confirm="handleDelete(scope.row.id,scope.row.documentPath)">
                   <template #reference>
-                    <el-button type="danger" size="small">删除</el-button>
+                    <el-button type="danger" size="small" v-if="user.role !== 3">删除</el-button>
                   </template>
                 </el-popconfirm>
               </div>
@@ -264,31 +267,37 @@ import axios from "axios";
 import {ref} from "vue";
 
 let upload = ref();
-let updateDrawing = ref();
+let updateDocument = ref();
 export default {
-  name: 'Drawing',
+  name: 'Document',
   components: {},
   data() {
     return {
       previewUrl: '',
       form: {},
-      historyForm:{},
+      historyForm: {},
       previewForm: {},
       //搜索栏表单
       formInline: {},
       search: '',
 
 
+      //鉴权用的用户信息
+      userId:0,
+      user:{},
+
+
+
       currentPage: 1,
       pageSize: 10,
 
-      currentHisPage:1,
-      pageHisSize:10,
+      currentHisPage: 1,
+      pageHisSize: 10,
 
       //总条数
       total: 0,
 
-      totalHis:0,
+      totalHis: 0,
       // 新增数据的对话框显示控制
       dialogVisible: false,
       //更新文件版本对话框显示控制
@@ -296,7 +305,7 @@ export default {
       //修改文件信息对话框显示控制
       editDialogVisible: false,
       //查看历史版本对话框显示控制
-      historyDialogVisible:false,
+      historyDialogVisible: false,
       fileData: '', // 表单数据+文件
       EditData: '',//编辑更新数据 新数据行+编辑行
       // importData:form,
@@ -307,18 +316,29 @@ export default {
       tableData: [],
 
       historyTableData: [],
-      ids:[],
-      selectedFiles:[],
+      ids: [],
+      selectedFiles: [],
       // filesUploadUrl:"http://" + window.server.filesUploadUrl + ":9090/files/uploadDrawingFiles"
     }
   },
   created() {
+
+    request.get("/getUserInfo",
+    ).then(res => {
+      this.userId = res.data;
+      request.get("/user/" + this.userId
+      ).then(res => {
+        if (res.code === "0") {
+          this.user = res.data;
+        }
+      })
+    });
     this.load()
   },
   computed: {
     isDisabledUpload() {
       const {itemNo, documentType} = this.form || {}
-      return !itemNo?.trim()  || !documentType
+      return !itemNo?.trim() || !documentType
     }
   },
   methods: {
@@ -341,8 +361,8 @@ export default {
       }
     },
     //批量删除方法
-    handleDeleteDrawings(){
-      if (! this.ids.length){
+    handleDeleteDrawings() {
+      if (!this.ids.length) {
         ElMessage({
           message: '请选择数据',
           type: 'warning',
@@ -371,14 +391,14 @@ export default {
     },
 
     //多选栏选择变化
-    handleSelectionChange(val){
+    handleSelectionChange(val) {
       this.ids = val.map(v => v.id)
       this.selectedFiles = val
-      console.log("this.selectedFiles:"+this.selectedFiles)
+      console.log("this.selectedFiles:" + this.selectedFiles)
     },
 
 
-    async historyLoad(){
+    async historyLoad() {
       try {
 
         //延迟执行
@@ -397,7 +417,7 @@ export default {
       }
     },
     //展示历史版本数据对话框点击事件
-     showHistory(row){
+    showHistory(row) {
       this.historyForm = JSON.parse(JSON.stringify(row));
       this.historyLoad();
       this.historyDialogVisible = true;
@@ -416,11 +436,11 @@ export default {
       this.oldFilePath = this.form.documentPath;
       this.updatedDialogVisible = true;
       this.$nextTick(() => {
-        this.$refs["updateDrawing"].clearFiles();
+        this.$refs["updateDocument"].clearFiles();
       })
     },
 
-    handleDialogHisClose(){
+    handleDialogHisClose() {
       this.historyTableData = [];
       this.historyDialogVisible = false;
     },
@@ -445,7 +465,7 @@ export default {
       this.fileData.append("file", params.file) // append增加数据
       axios.request({
         method: 'post',
-        url: 'http://' + window.server.filesUploadUrl + ':9090/files/updateDrawingFiles',
+        url: 'http://' + window.server.filesUploadUrl + ':9090/files/updateDocumentFiles',
         headers: {
           'Content-Type': 'multipart/form-data',
           'token': JSON.parse(sessionStorage.getItem('token'))
@@ -467,7 +487,7 @@ export default {
       })
     },
     handleBeforeUpdate() {
-      updateDrawing.value.submit()
+      updateDocument.value.submit()
     },
     uploadFile(params) {
       this.fileData = new FormData()
@@ -476,7 +496,7 @@ export default {
       this.fileData.append("file", params.file) // append增加数据
       axios.request({
         method: 'post',
-        url: 'http://' + window.server.filesUploadUrl + ':9090/files/uploadDrawingFiles',
+        url: 'http://' + window.server.filesUploadUrl + ':9090/files/uploadDocumentFiles',
         headers: {
           'Content-Type': 'multipart/form-data',
           'token': JSON.parse(sessionStorage.getItem('token'))
@@ -514,7 +534,7 @@ export default {
       const blob = new Blob([XLSX.write(wb, {bookType: 'xlsx', type: 'array'})], {type: 'application/octet-stream'});
       FileSaver.saveAs(blob, fileName);
     },
-    getDrawingType(type) {
+    getDocumentType(type) {
       switch (type) {
         case 1:
           return '材料清单'
@@ -573,7 +593,7 @@ export default {
     //删除单个文件
     del_file(path) {
       console.log("path" + path)
-      request.post("/files/delDrawingFile", {delDrawingPath: path}).then(res => {
+      request.post("/files/delDocumentFile", {delDocumentPath: path}).then(res => {
             console.log(res);
             if (res.code === '0') {
               ElMessage({
@@ -592,7 +612,7 @@ export default {
     },
     //批量删除文件
     del_files(ids) {
-      return request.post("/files/delDrawingFiles", this.ids).then(res => {
+      return request.post("/files/delDocumentFiles", this.ids).then(res => {
             console.log(res);
             if (res.code === '0') {
               ElMessage({
@@ -662,52 +682,52 @@ export default {
     save() {
       // Convert documentType to an integer before submitting the form
       this.form.documentType = parseInt(this.form.documentType);
+      //新增
+      const fieldNames = {
+        itemNo: '产品编号',
+        documentType: '图纸类型',
+        materialNo: '料号',
+        documentPath: '图纸文件',
+      };
+      const requiredFields = Object.keys(fieldNames);
+      let isFormValid = true;
+      let missingFields = [];
+      for (let i = 0; i < requiredFields.length; i++) {
+        const field = requiredFields[i];
+        if (!this.form[field]) {
+          isFormValid = false;
+          missingFields.push(fieldNames[field]);
+        }
+      }
+      if (isFormValid) {
         //新增
-        const fieldNames = {
-          itemNo: '产品编号',
-          documentType: '图纸类型',
-          materialNo: '料号',
-          documentPath: '图纸文件',
-        };
-        const requiredFields = Object.keys(fieldNames);
-        let isFormValid = true;
-        let missingFields = [];
-        for (let i = 0; i < requiredFields.length; i++) {
-          const field = requiredFields[i];
-          if (!this.form[field]) {
-            isFormValid = false;
-            missingFields.push(fieldNames[field]);
-          }
-        }
-        if (isFormValid) {
-          //新增
-          request.post("/document", this.form).then(res => {
-            console.log("进入新增");
-            if (res.code === '0') {
-              ElMessage({
-                message: '新增成功',
-                type: 'success',
-              })
-              this.load();//更新表单数据
-            } else {
-              console.log("this.form" + this.form);
-              ElMessage({
-                message: res.msg,
-                type: 'error',
+        request.post("/document", this.form).then(res => {
+          console.log("进入新增");
+          if (res.code === '0') {
+            ElMessage({
+              message: '新增成功',
+              type: 'success',
+            })
+            this.load();//更新表单数据
+          } else {
+            console.log("this.form" + this.form);
+            ElMessage({
+              message: res.msg,
+              type: 'error',
 
-              })
-              //   如果新增失败 需要发起删除掉上传到文件服务器的文件
-              console.log(this.oldFilePath)
-              this.del_file(this.form.documentPath)
-            }
-          });
-        } else {
-          ElMessage({
-            message: `缺少以下字段：${missingFields.join(', ')}`,
-            type: 'warning',
-          })
-        }
-        this.dialogVisible = false;//关闭弹窗
+            })
+            //   如果新增失败 需要发起删除掉上传到文件服务器的文件
+            console.log(this.oldFilePath)
+            this.del_file(this.form.documentPath)
+          }
+        });
+      } else {
+        ElMessage({
+          message: `缺少以下字段：${missingFields.join(', ')}`,
+          type: 'warning',
+        })
+      }
+      this.dialogVisible = false;//关闭弹窗
 
 
     },
@@ -720,7 +740,7 @@ export default {
       }
       //如果用户没有进行了文件上传的工作
       //关闭对话框
-      this.dialogVisible = false;
+      this.updatedDialogVisible = false;
     },
     //如果用户在新增或者修改窗口点击了取消
     cancel() {
@@ -737,7 +757,7 @@ export default {
     previewFile(row) {
       this.form = JSON.parse(JSON.stringify(row));
 
-      request.get("/document/" + this.form.id).then(res => {
+      request.get("/document/getId/" + this.form.id).then(res => {
         console.log(res);
         if (res.code === '0') {
 
@@ -761,10 +781,10 @@ export default {
     handleCurrentChange() {
       this.load()
     },
-    handleHisSizeChange(){
+    handleHisSizeChange() {
       this.historyLoad()
     },
-    handleHisCurrentChange(){
+    handleHisCurrentChange() {
       this.historyLoad()
     },
 
@@ -797,6 +817,10 @@ export default {
 
 .table tbody tr:nth-child(even) {
   background-color: #8A77A5;
+}
+
+.table .el-table__row {
+  height: 60px; /* 设置行高为60px，可以根据实际情况进行调整 */
 }
 
 .el-table_3_column_12 .cell {

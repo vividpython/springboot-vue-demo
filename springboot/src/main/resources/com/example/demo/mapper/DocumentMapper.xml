@@ -3,10 +3,65 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.example.demo.mapper.DocumentMapper">
-    <select id="findDocumentList" resultType="com.example.demo.entity.Document"></select>
-    <select id="findDocumentListByPN" resultType="com.example.demo.entity.Document"></select>
-    <select id="findHistoryList" resultType="com.example.demo.entity.Document"></select>
-    <select id="findDocumentMore" resultType="com.example.demo.entity.Document"></select>
+    <select id="findDocumentList" resultType="com.example.demo.entity.Document">
+        select *
+        from document d1
+        where id in (
+        select max(id)
+        from document
+        group by item_no, material_no, document_type, sequence_no
+        )
+        <if test="documentQueryParam != null">
+            <if test="documentQueryParam.itemNo != null and documentQueryParam.itemNo != ''">
+                and item_no like CONCAT('%',#{documentQueryParam.itemNo}, '%')
+            </if>
+            <if test="documentQueryParam.materialNo != null and documentQueryParam.materialNo != ''">
+                and material_no like CONCAT('%',#{documentQueryParam.material_no}, '%')
+            </if>
+            <if test="documentQueryParam.documentType != null and documentQueryParam.documentType != ''">
+                and document_type = #{documentQueryParam.documentType}
+            </if>
+        </if>
+    </select>
+    <select id="findHistoryList" resultType="com.example.demo.entity.Document">
+        SELECT *
+        FROM document
+        WHERE item_no = #{document.itemNo}
+        AND sequence_no = #{document.sequenceNo}
+        AND document_type = #{document.documentType}
+        AND document_version &lt;&gt; #{document.documentVersion}
+        <if test="document.materialNo == null">
+            AND material_no IS NULL
+        </if>
+        <if test="document.materialNo != null">
+            AND material_no = #{document.materialNo}
+        </if>
+    </select>
+    <select id="findDocumentMore" resultType="com.example.demo.entity.Document">
+        SELECT * FROM document WHERE id IN
+        <foreach collection="ids" index="index" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+    <select id="findDocumentListByINTE" resultType="com.example.demo.entity.Document">
+        select *
+        from document d1
+        where id in (
+        select max(id)
+        from document
+        group by item_no, material_no, document_type, sequence_no
+        )
+        <if test="itemNo != null and itemNo != ''">
+            and item_no = #{itemNo}
+        </if>
+        <if test="documentTypeList != null and !documentTypeList.isEmpty()">
+            and document_type in
+            <foreach collection="documentTypeList" item="documentType" open="(" separator="," close=")">
+                #{documentType}
+            </foreach>
+        </if>
+    </select>
+
 </mapper>
 
 

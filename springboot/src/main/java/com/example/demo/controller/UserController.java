@@ -55,22 +55,6 @@ public class UserController {
         Result<User> result=  userService.findUserList(index, size, userQueryParam);
         return result;
     }
-    //@GetMapping
-    //public Result<?> findUserTest(@RequestParam(defaultValue = "1") Integer index,
-    //                              @RequestParam(defaultValue = "10") Integer size,
-    //                              @RequestParam(defaultValue = "") String search) {
-    //    LambdaQueryWrapper<User> wrapper = Wrappers.<User>lambdaQuery();
-    //    if (StrUtil.isNotBlank(search)) {
-    //        wrapper.like(User::getNickName, search);
-    //    }
-    //    Page<User> userPage = userMapper.selectPage(new Page<User>(index, size), wrapper);
-    //    return Result.success(userPage);
-    //
-    //}
-    //@PostMapping("/login")
-    //public Result<?> login(@RequestBody User user) {
-    //    return userService.getOneUser(user);
-    //}
     @PostMapping("/login")
     @MyLog(title = "登录", operParam = "#{user.username},#{user.password}", businessType = BusinessType.OTHER)
     public Result<?> login(@RequestBody User user, HttpSession session) {

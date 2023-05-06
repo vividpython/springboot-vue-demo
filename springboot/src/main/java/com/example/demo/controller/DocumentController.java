@@ -50,7 +50,7 @@ public class DocumentController {
         System.out.println("this is pull test code...");
         return result;
     }
-    //
+    //获取历史版本的文件列表
     @PostMapping("/historyList/{index}/{size}")
     public Result<?> findHistoryList(@PathVariable(value = "index") Integer index,
                                      @PathVariable(value = "size") Integer size,
@@ -64,16 +64,16 @@ public class DocumentController {
 
 
     // 根据用户编号查询用户信息
-    @GetMapping("{id}")
+    @GetMapping("/getId/{id}")
     public Result<?> getDocumentInfo(@PathVariable(value = "id") Integer id) {
         return documentService.getDocumentById(id);
     }
 
 
     //根据料号查询
-    @GetMapping("/getFilePath")
-    public Result<?> getFilePath(@RequestParam String itemNo,@RequestParam String materialNo) {
-        Result<?> filePaths = documentService.getFilePath(itemNo,materialNo);
+    @GetMapping("/getDocumentPath")
+    public Result<?> getDocumentPath(@RequestParam String itemNo,@RequestParam List<Integer> documentTypeList) {
+        Result<?> filePaths = documentService.getFilePath(itemNo,documentTypeList);
         return filePaths;
     }
 }
