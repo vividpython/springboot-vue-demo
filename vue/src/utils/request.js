@@ -56,7 +56,7 @@ request.interceptors.response.use(
             //     query: { redirect: router.currentRoute.fullPath }
             // })
         }
-        console.log('err' + error) // for debug
+        console.log('err' + error.response) // for debug
         return Promise.reject(error)
     }
 )

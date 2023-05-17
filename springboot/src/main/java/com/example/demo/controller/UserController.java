@@ -78,6 +78,7 @@ public class UserController {
             if (!StringUtils.isEmpty(token)) {
                 json.put("token", token);
             }
+            System.out.println(json);
             //// 构造返回结果对象
             //Map<String, Object> map = new HashMap<>();
             //map.put("token", token);

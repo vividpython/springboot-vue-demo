@@ -27,7 +27,8 @@ import java.util.Map;
 public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> implements DocumentService {
 
 
-
+    @Value("${file.location}")
+    private  String file_location ;
     @Value("${nginx.location}")
     private String nginx_location;
     //插入用户
@@ -322,7 +323,10 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
     }
     public void renameFile(String documentName, String documentPath) {
 
-        String subPath = nginx_location +  documentPath.substring(documentPath.indexOf("files/") + 6);
+        //String subPath = nginx_location
+        //        +  documentPath.substring(documentPath.indexOf("files/") + 6);
+        String subPath = nginx_location
+                +  documentPath.substring(documentPath.indexOf(file_location) + file_location.length() -1);
         // 获取文件名
         String fileName = subPath.substring(subPath.lastIndexOf("/") + 1);
         // 获取文件所在文件夹的路径

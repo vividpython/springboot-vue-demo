@@ -43,6 +43,9 @@ public class FileController {
     @Value("${file.ip}")
     private  String ip ;
 
+    @Value("${file.location}")
+    private  String file_location ;
+
     @Resource
     DrawingService drawingService;
     @Resource
@@ -53,7 +56,9 @@ public class FileController {
         //定义文件的唯一标识
         String flag = IdUtil.fastSimpleUUID();
         //String rootFilePath = System.getProperty("user.dir") + "/springboot/src/main/resources/userIcons/" + flag + "_" + originalFilename;
-        String rootFilePath ="/files/" + flag + "_" + originalFilename;
+        //String rootFilePath ="/files/" + flag + "_" + originalFilename;
+        String rootFilePath =file_location + flag + "_" + originalFilename;
+
         FileUtil.writeBytes(file.getBytes(),rootFilePath);
         //return Result.success("http://" +ip + ":" + port + "/files/" + flag + "_" + originalFilename);
         return Result.success("http://" + ip + ":" + nginx_port + "/" + flag + "_" + originalFilename);
@@ -65,7 +70,9 @@ public class FileController {
         //定义文件的唯一标识
         String flag = IdUtil.fastSimpleUUID();
         //String rootFilePath = System.getProperty("user.dir") + "/springboot/src/main/resources/userIcons/" + flag + "_" + originalFilename;
-        String rootFilePath ="/files/" + flag + "_" + originalFilename;
+        //String rootFilePath ="/files/" + flag + "_" + originalFilename;
+        String rootFilePath =file_location + flag + "_" + originalFilename;
+
         FileUtil.writeBytes(file.getBytes(),rootFilePath);
         //return Result.success("http://" +ip + ":" + port + "/files/" + flag + "_" + originalFilename);
         String url = "http://" + ip + ":" + nginx_port + "/" + flag + "_" + originalFilename;
@@ -108,13 +115,14 @@ public class FileController {
         }
         // 根据信息创建对应的文件夹
         // 拼接文件夹路径
-        String folderPath = "/files";
+        //String folderPath = "/files/";
+        String folderPath = file_location;
         //判断一下项目号是否为空 如果为空 则表示标品 如果不为空则表示项目需要特殊产品
         if (StringUtils.isNotBlank(itemNo)) {
             //判断一下有没有项目号  有项目号创建项目号路径
-            folderPath += "/" + itemNo + "/" + productNo ;
+            folderPath +=  itemNo + "/" + productNo ;
         } else {
-            folderPath += "/StandardProduct/"  + productNo;
+            folderPath += "StandardProduct/"  + productNo;
         }
         // 保存文件
         String NowDrawingVersion =  drawingService.getNowDrawingVersion(id);
@@ -169,13 +177,14 @@ public class FileController {
             documentTypeName = documentTypeMap.get(documentType);
         }
         // 根据信息创建对应的文件夹
-        String folderPath = "/files";
+        //String folderPath = "/files/";
+        String folderPath = file_location;
         //判断一下料号是否为空 如果为空 则表示为备产产品 如果不为空则表示标准生产订单产品
         if (StringUtils.isNotBlank(materialNo)) {
             //判断一下有没有项目号  有项目号创建项目号路径
-            folderPath += "/" + itemNo + "/" + materialNo + "/" +  documentTypeName;
+            folderPath += itemNo + "/" + materialNo + "/" +  documentTypeName;
         } else {
-            folderPath += "/itemNo/"  + documentTypeName;
+            folderPath += "itemNo/"  + documentTypeName;
         }
         // 保存文件
         String NowDocumentVersion =  documentService.getNowDocumentVersion(id);
@@ -217,13 +226,14 @@ public class FileController {
         //}
         // 根据信息创建对应的文件夹
         // 拼接文件夹路径
-        String folderPath = "/files";
+        //String folderPath = "/files/";
+        String folderPath = file_location;
         //判断一下项目号是否为空 如果为空 则表示标品 如果不为空则表示项目需要特殊产品
         if (StringUtils.isNotBlank(itemNo)) {
             //判断一下有没有项目号  有项目号创建项目号路径
-            folderPath += "/" + itemNo + "/" + productNo ;
+            folderPath +=  itemNo + "/" + productNo ;
         } else {
-            folderPath += "/StandardProduct/"  + productNo;
+            folderPath += "StandardProduct/"  + productNo;
         }
         // 保存文件
 
@@ -271,13 +281,14 @@ public class FileController {
         }
          //根据信息创建对应的文件夹
          //拼接文件夹路径
-        String folderPath = "/files";
+        //String folderPath = "/files/";
+        String folderPath = file_location;
         //判断一下料号是否为空 如果为空 则表示为备产产品 如果不为空则表示标准生产订单产品
         if (StringUtils.isNotBlank(materialNo)) {
             //判断一下有没有项目号  有项目号创建项目号路径
-            folderPath += "/" + itemNo + "/" + materialNo + "/" +  documentTypeName;
+            folderPath +=   itemNo + "/" + materialNo + "/" +  documentTypeName;
         } else {
-            folderPath += "/itemNo/"  + documentTypeName;
+            folderPath += "itemNo/"  + documentTypeName;
         }
         // 保存文件
 
@@ -302,9 +313,12 @@ public class FileController {
 
     @PostMapping("/delDrawingFile")
     public Result<?> delDrawingFile(@RequestBody String delDrawingPath){
+
         String delDrawingPath1 = delDrawingPath.replace("{\"delDrawingPath\":\"","").replace("\"}","");
+        //String filePath = nginx_location
+        //        + delDrawingPath1.substring(delDrawingPath1.indexOf("/files/") + 6);
         String filePath = nginx_location
-                + delDrawingPath1.substring(delDrawingPath1.indexOf("/files/") + 6);
+                + delDrawingPath1.substring(delDrawingPath1.indexOf(file_location) + file_location.length()-1);
         System.out.println(filePath);
         File fileToDelete = new File(filePath);
         if (fileToDelete.delete()) {
@@ -343,8 +357,10 @@ public class FileController {
     @PostMapping("/delDocumentFile")
     public Result<?> delDocumentFile(@RequestBody String delDocumentPath){
         String delDocumentPath1 = delDocumentPath.replace("{\"delDocumentPath\":\"","").replace("\"}","");
+        //String filePath = nginx_location
+        //        + delDocumentPath1.substring(delDocumentPath1.indexOf("/files/") + 6);
         String filePath = nginx_location
-                + delDocumentPath1.substring(delDocumentPath1.indexOf("/files/") + 6);
+                + delDocumentPath1.substring(delDocumentPath1.indexOf(file_location) + file_location.length()-1);
         System.out.println("filePath"+filePath);
         File fileToDelete = new File(filePath);
         if (fileToDelete.delete()) {

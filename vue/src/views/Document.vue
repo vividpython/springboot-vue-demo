@@ -281,6 +281,8 @@ export default {
       formInline: {},
       search: '',
 
+      // //文件存储的真实路径 生产环境时应视需求修改
+      // file_location:'/files/',
 
       //鉴权用的用户信息
       userId:0,
@@ -351,7 +353,9 @@ export default {
         return
       }
       for (const file of this.selectedFiles) {
-        const url = "http://" + file.documentPath;
+        const url_raw = window.server.filesUploadUrl + ":" + window.server.filesUploadPort + file.documentPath.replace(window.server.filesUploadUrl,"");
+        console.log(url_raw)
+        const url = "http://" + url_raw;
         const link = document.createElement('a');
         link.href = url;
         link.target = "_blank";
@@ -424,7 +428,9 @@ export default {
     },
     //文件下载
     downloadFile(row) {
-      const url = "http://" + row.documentPath;
+      const url_raw = window.server.filesUploadUrl + ":" + window.server.filesUploadPort + row.documentPath.replace(window.server.filesUploadUrl,"");
+      console.log(url_raw)
+      const url = "http://" + url_raw;
       const link = document.createElement('a');
       link.href = url;
       link.download = url.split('/').pop(); // 获取文件名
@@ -735,8 +741,11 @@ export default {
     cancelUpate() {
       //只要用户在取消之前进行了文件上传的工作 并且点击了取消 都要删除掉本次上传的文件
       if (this.form.documentPath !== this.oldFilePath) {
+        console.log("用户上传过文件了")
         console.log("this.form.documentPath:" + this.form.documentPath)
-        this.del_file(this.form.documentPath.substring(this.form.documentPath.indexOf("/files/") + "/files/".length))
+        // this.del_file(this.form.documentPath.substring(this.form.documentPath.indexOf("/files/") + "/files/".length))
+        // this.del_file(this.form.documentPath.substring(this.form.documentPath.indexOf(this.file_location) + this.file_location.length))
+        this.del_file(this.form.documentPath)
       }
       //如果用户没有进行了文件上传的工作
       //关闭对话框
@@ -762,9 +771,14 @@ export default {
         if (res.code === '0') {
 
           //查询成功之后 开始进行调用预览
-          this.previewUrl = "http://" + res.data.documentPath;
+          this.previewUrl = "http://" + window.server.filesUploadUrl + ":"
+              + window.server.filesUploadPort
+              + res.data.documentPath.replace(window.server.filesUploadUrl,"");;
           console.log(this.previewUrl);
-          window.open('http://127.0.0.1:8012/onlinePreview?url=' + encodeURIComponent(Base64.encode(this.previewUrl)));
+
+          window.open('http://' + window.server.filesUploadUrl  + ':'
+              + window.server.kkfileviewPort +'/onlinePreview?url='
+              + encodeURIComponent(Base64.encode(this.previewUrl)));
         } else {
           ElMessage({
             message: '预览失败',

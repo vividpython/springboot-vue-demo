@@ -324,6 +324,9 @@ export default {
       search: '',
 
 
+      // //文件存储的真实路径 生产环境时应视需求修改
+      // file_location:'/files/',
+
       currentPage: 1,
       pageSize: 10,
 
@@ -376,7 +379,9 @@ export default {
         return
       }
       for (const file of this.selectedFiles) {
-        const url = "http://" + file.drawingPath;
+        const url_raw = window.server.filesUploadUrl + ":" + window.server.filesUploadPort + file.drawingPath.replace(window.server.filesUploadUrl,"");
+        console.log(url_raw)
+        const url = "http://" + url_raw;
         const link = document.createElement('a');
         link.href = url;
         link.target = "_blank";
@@ -456,7 +461,9 @@ export default {
     },
     //文件下载
     downloadFile(row) {
-      const url = "http://" + row.drawingPath;
+      const url_raw = window.server.filesUploadUrl + ":" + window.server.filesUploadPort + row.drawingPath.replace(window.server.filesUploadUrl,"");
+      console.log(url_raw)
+      const url = "http://" + url_raw;
       const link = document.createElement('a');
       link.href = url;
       link.download = url.split('/').pop(); // 获取文件名
@@ -828,7 +835,9 @@ export default {
       //只要用户在取消之前进行了文件上传的工作 并且点击了取消 都要删除掉本次上传的文件
       if (this.form.drawingPath !== this.oldFilePath) {
         console.log("this.form.drawingPath:" + this.form.drawingPath)
-        this.del_file(this.form.drawingPath.substring(this.form.drawingPath.indexOf("/files/") + "/files/".length))
+        // this.del_file(this.form.drawingPath.substring(this.form.drawingPath.indexOf("/files/") + "/files/".length))
+        // this.del_file(this.form.drawingPath.substring(this.form.drawingPath.indexOf(this.file_location) + this.file_location.length))
+        this.del_file(this.form.drawingPath)
       }
       //如果用户没有进行了文件上传的工作
       //关闭对话框
