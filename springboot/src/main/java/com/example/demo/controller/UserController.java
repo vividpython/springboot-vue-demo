@@ -10,9 +10,12 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import java.net.http.HttpResponse;
 import java.util.Objects;
 
 @RestController
@@ -42,7 +45,8 @@ public class UserController {
     // 编辑用户
     @PutMapping("")
     @MyLog(title = "编辑用户", operParam = "#{user}", businessType = BusinessType.UPDATE)
-    public Result<?> modifyUser(@RequestBody User user) {
+    public Result<?> modifyUser(@RequestBody User user, HttpSession session) {
+        //Integer userId = (Integer) session.getAttribute("userId");
         return userService.modifyUser(user);
     }
     // 查询用户列表
@@ -55,9 +59,11 @@ public class UserController {
         Result<User> result=  userService.findUserList(index, size, userQueryParam);
         return result;
     }
+
+
     @PostMapping("/login")
     @MyLog(title = "登录", operParam = "#{user.username},#{user.password}", businessType = BusinessType.OTHER)
-    public Result<?> login(@RequestBody User user, HttpSession session) {
+    public Result<?> login(@RequestBody User user, HttpServletResponse response) {
         JSONObject json = new JSONObject();
 
         /** 验证userName，passWord和数据库中是否一致，如不一致，直接return ResultTool.errer(); 【这里省略该步骤】*/
@@ -67,23 +73,20 @@ public class UserController {
         }else {
             User res = (User)oneUser.getData();
             Integer userId = res.getId();
-            ThreadLocalUtils.set("userId",userId);
+            //ThreadLocalUtils.set("userId",userId);
+            // 将userId存储在Cookie中
+            Cookie cookie = new Cookie("userId", userId.toString());
+            cookie.setMaxAge(180 * 60); // 设置Cookie的过期时间为30分钟
+            cookie.setPath("/");
+            response.addCookie(cookie);
 
-            session.setAttribute("userId", userId);
-
-
-            // 打印当前线程 ID 和存储的 userId 值
+            //session.setAttribute("userId", userId);
             String token = jwtConfig.createToken(userId);
 
             if (!StringUtils.isEmpty(token)) {
                 json.put("token", token);
             }
             System.out.println(json);
-            //// 构造返回结果对象
-            //Map<String, Object> map = new HashMap<>();
-            //map.put("token", token);
-            //map.put("user", res);
-            //return Result.success(map);
             return Result.success(json);
         }
         // 这里模拟通过用户名和密码，从数据库查询userId
@@ -92,16 +95,22 @@ public class UserController {
 
     @PostMapping("/logout")
     @MyLog(title = "退出登录", businessType = BusinessType.OTHER)
-    public Result<?> logout() {
+    public Result<?> logout(HttpServletResponse response) {
         // 注销用户认证信息
         ThreadLocalUtils.removeByKey("userId");
+
+        Cookie cookie = new Cookie("userId", null);
+        cookie.setMaxAge(0);
+        cookie.setPath("/");
+        response.addCookie(cookie);
+
         // 构造响应数据
         return Result.success();
     }
 
     // 根据用户编号查询用户信息
     @GetMapping("{id}")
-    public Result<?> getUserInfo(@PathVariable(value = "id") Integer id) {
+    public Result<?> getUserInfoById(@PathVariable(value = "id") Integer id) {
         return userService.getUserInfoById(id);
     }
 
@@ -120,4 +129,12 @@ public class UserController {
     public Result<?> register(@RequestBody User user) {
         return userService.insertUser(user);
     }
+
+
+    @PostMapping("/confirmPassword")
+    public Result<?> confirmPassword(@RequestBody User user) {
+        return userService.confirmPassword(user);
+    }
+
+
 }

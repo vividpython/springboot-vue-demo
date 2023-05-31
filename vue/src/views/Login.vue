@@ -15,8 +15,8 @@
               type="text"
               ref="inputCode"
               v-model="inputCode"
-              style="width:175px"
-              placeholder="请输入验证码"
+              style="width:240px"
+              placeholder="请输入验证码,点击右边图片可刷新"
               clearable
           />
           <span @click="createCode" id="spancode">
@@ -124,9 +124,11 @@ export default {
               _this.$router.push("/")
             }else {
               ElMessage({
-                message: '登录失败',
+                message: '用户名或密码错误',
                 type: 'error',
               })
+              this.inputCode = ''
+              this.createCode()
             }
           })
         }})

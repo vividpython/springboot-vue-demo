@@ -28,6 +28,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.annotation.Resource;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.lang.reflect.Method;
@@ -105,10 +106,26 @@ public class LogAspect {
         //    operLog.setOperCreator("null");
         //    operLog.setOperId(-1);
         //}
-        HttpSession session = request.getSession();
-        Integer userId = (Integer) session.getAttribute("userId");
-        operLog.setOperCreator(userService.getUserInfolog(userId).getUsername());
-        operLog.setOperId(userService.getUserInfolog(userId).getId());
+        //HttpSession session = request.getSession();
+        //Integer userId = (Integer) session.getAttribute("userId");
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("userId".equals(cookie.getName())) {
+                    String userIdStr = cookie.getValue();
+                    Integer userId = Integer.parseInt(userIdStr);
+                    // 根据userId获取用户信息
+                    User userInfolog = userService.getUserInfolog(userId);
+
+                    if (userInfolog != null) {
+                        operLog.setOperCreator(userInfolog.getUsername());
+                        operLog.setOperId(userInfolog.getId());
+                    }
+                }
+            }
+        }
+        //operLog.setOperCreator(userService.getUserInfolog(userId).getUsername());
+        //operLog.setOperId(userService.getUserInfolog(userId).getId());
         //operLog.setOperCreator("null");
         //operLog.setOperId(-1);
         //获取请求头中的token

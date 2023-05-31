@@ -17,10 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.annotation.Resource;
 import javax.print.Doc;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service("documentService")
 @Transactional
@@ -42,27 +39,28 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
 
 
 
-        //获取当前文件的文件序号的最大值 分为两种情况 一种是备产的产品（不带料号） 一种是标准项目文件（带料号）
+
 
 
         String documentTypeValue = "";
         //// 根据类型值获取对应的汉字
         Map<Integer, String> documentTypeMap = new HashMap<>();
-        documentTypeMap.put(1, "材料清单");
-        documentTypeMap.put(2, "装配工艺图");
-        documentTypeMap.put(3, "电气接线图");
-        documentTypeMap.put(4, "变更通知单");
-        documentTypeMap.put(5, "技术交底单");
+        documentTypeMap.put(1, "BOM");
+        documentTypeMap.put(2, "APD");
+        documentTypeMap.put(3, "EWD");
+        documentTypeMap.put(4, "CN");
+        documentTypeMap.put(5, "TDF");
         if (documentTypeMap.containsKey(document.getDocumentType())) {
             documentTypeValue = documentTypeMap.get(document.getDocumentType());
         }
-
+        //获取当前文件的文件序号的最大值 分为两种情况 一种是备产的产品（不带料号） 一种是标准项目文件（带料号）
         //判断一下是因为更新文件版本的插入数据还是第一次的数据插入
         //如果是因为更新版本而插入数据 则要去掉带入的id 并且文件名中的
+        System.out.println(document);
         if ( document.getId() != null ){
             document.setId(null);
             document.setCreateTime(null);
-
+            document.setUpdateTime(findDocumentCreateTime(document).getCreateTime());
             //如果料号为空 则为备产产品
             if (document.getMaterialNo() == null ){
                 //备产产品
@@ -161,6 +159,20 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
         Result result = new Result<>(iPage);
         return Result.success(iPage);
     }
+
+    @Override
+    public Document findDocumentCreateTime(Document document) {
+
+        String documentVersionPre ="A" + String.format("%02d", Integer.parseInt(document.getDocumentVersion().substring(1))-1) ;
+        QueryWrapper<Document> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("item_no", document.getItemNo())
+                .eq("material_no", document.getMaterialNo())
+                .eq("document_type", document.getDocumentType())
+                .eq("sequence_no", document.getSequenceNo())
+                .eq("document_version", documentVersionPre);
+
+        return this.baseMapper.selectOne(queryWrapper);
+    }
     //修改
 
     //删除单个用户
@@ -250,11 +262,11 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
         String documentTypeValue = "";
         //// 根据类型值获取对应的汉字
         Map<Integer, String> documentTypeMap = new HashMap<>();
-        documentTypeMap.put(1, "材料清单");
-        documentTypeMap.put(2, "装配工艺图");
-        documentTypeMap.put(3, "电气接线图");
-        documentTypeMap.put(4, "变更通知单");
-        documentTypeMap.put(5, "技术交底单");
+        documentTypeMap.put(1, "BOM");
+        documentTypeMap.put(2, "APD");
+        documentTypeMap.put(3, "EWD");
+        documentTypeMap.put(4, "CN");
+        documentTypeMap.put(5, "TDF");
         if (documentTypeMap.containsKey(documentType)) {
             documentTypeValue = documentTypeMap.get(documentType);
         }

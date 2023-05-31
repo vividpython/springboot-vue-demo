@@ -23,8 +23,16 @@ public interface DocumentService extends IService<Document> {
      */
     Result findDocumentList(Integer index, Integer size, DocumentQueryParam documentQueryParam);
 
+    Document findDocumentCreateTime(Document document);
 
     Result<?> deleteDocument(Integer id);
+    /**
+     * @description: 根据id查询
+     * @param id:
+     * @return com.example.demo.common.Result<?>
+     * @author: Zheng
+     * @date: 2023/5/17 17:31
+     */
 
     Result<?> getDocumentById(Integer id);
 

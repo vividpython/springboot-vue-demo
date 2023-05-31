@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.demo.mapper.ItemMasterMapper">
+    <select id="findItemMasterList" resultType="com.example.demo.entity.ItemMaster">
+        SELECT * FROM dbo.Cust_ERP_MES_ItemMaster_View
+        <where>
+            1 = 1
+            <if test="itemMasterQueryParam != null">
+                <if test="itemMasterQueryParam.code != null and itemMasterQueryParam.code != ''">
+                    and Code like CONCAT('%',#{itemMasterQueryParam.code}, '%')
+                </if>
+                <if test="itemMasterQueryParam.name != null and itemMasterQueryParam.name != ''">
+                    and Name like CONCAT('%',#{itemMasterQueryParam.name}, '%')
+                </if>
+                <if test="itemMasterQueryParam.specs != null and itemMasterQueryParam.specs != ''">
+                    and Specs like CONCAT('%',#{itemMasterQueryParam.specs}, '%')
+                </if>
+            </if>
+        </where>
+    </select>
+</mapper>
+
+

@@ -12,16 +12,10 @@
     <div style="margin: 10px ; padding: 0px">
       <el-form :inline="true" :model="formInline" class="demo-form-inline" ref="resetformInline">
         <el-form-item label="用户名">
-          <el-input v-model="formInline.user" placeholder="please input" clearable/>
+          <el-input v-model="formInline.username" placeholder="please input" clearable/>
         </el-form-item>
         <el-form-item label="昵称">
           <el-input v-model="formInline.nickName" placeholder="Please input"/>
-        </el-form-item>
-        <el-form-item label="性别">
-          <el-input v-model="formInline.sex" placeholder="Please input"/>
-        </el-form-item>
-        <el-form-item label="地址">
-          <el-input v-model="formInline.address" placeholder="Please input"/>
         </el-form-item>
         <el-form-item>
           <el-button color="#E0BF75" style="margin-left: 5px" :icon="Search" @click="load">查询</el-button>
@@ -32,17 +26,15 @@
     <!--内容区域-->
     <el-table
         :data="tableData"
-        style="width: 100%"
+        style="width: 100%;"
         border
         class="table"
         :stripe="false"
+        fit
     >
       <el-table-column prop="id" label="ID" sortable/>
       <el-table-column prop="username" label="用户名"/>
       <el-table-column prop="nickName" label="昵称"/>
-      <el-table-column prop="age" label="年龄"/>
-      <el-table-column prop="sex" label="性别"/>
-      <el-table-column prop="address" label="地址"/>
       <el-table-column  label="角色">
         <template #default="scope">
           <span v-if="scope.row.role === 1">管理员</span>
@@ -50,6 +42,7 @@
           <span v-if="scope.row.role === 3">其他</span>
         </template>
       </el-table-column>
+      <el-table-column label="部门名称" prop="depart.name" />
       <el-table-column  label="头像">
         <template #default="scope">
           <el-image
@@ -97,19 +90,6 @@
         </el-form-item>
         <el-form-item label="角色">
           <el-input v-model="form.role" style="width: 80%"/>
-        </el-form-item>
-        <el-form-item label="年龄">
-          <el-input v-model="form.age" style="width: 80%"/>
-        </el-form-item>
-        <el-form-item label="性别">
-          <el-radio-group v-model="form.sex">
-            <el-radio label="男">男</el-radio>
-            <el-radio label="女">女</el-radio>
-            <el-radio label="未知">未知</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="地址">
-          <el-input v-model="form.address" style="width: 80%"/>
         </el-form-item>
         <el-form-item label="头像">
           <el-upload ref="upload" :action="filesUploadUrl"
@@ -182,7 +162,7 @@ export default {
 
         //延迟执行
         await this.delay(1000);
-
+        console.log("this.formInline:"+this.formInline);
         // const url = "/user/" + this.currentPage + "/" + this.pageSize;
         request.post(`/user/${this.currentPage}/${this.pageSize}`, JSON.parse(JSON.stringify(this.formInline))
         ).then(res => {

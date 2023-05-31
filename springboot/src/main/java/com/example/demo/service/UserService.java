@@ -30,4 +30,6 @@ public interface UserService extends IService<User> {
     Result<?> getUserInfoById(Integer id);
 
     User getUserInfolog(Integer id);
+
+    Result<?> confirmPassword(User user);
 }

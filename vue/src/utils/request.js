@@ -2,9 +2,11 @@ import axios from 'axios'
 import router from "@/router";
 import {ElMessage} from "element-plus";
 
+const cancelToken = axios.CancelToken;
 const request = axios.create({
     baseURL: '/api',  // 注意！！ 这里是全局统一加上了 '/api' 前缀，也就是说所有接口都会加上'/api'前缀在，页面里面写接口的时候就不要加 '/api'了，否则会出现2个'/api'，类似 '/api/api/user'这样的报错，切记！！！
-    timeout: 5000
+    timeout: 5000,
+    cancelToken: cancelToken.token, // 添加cancelToken属性
 })
 
 // request 拦截器
@@ -26,7 +28,7 @@ request.interceptors.request.use(config => {
 }, error => {
     return Promise.reject(error)
 });
-
+let is401Handled = false; // 添加标记，表示是否已经处理过 401 错误
 // response 拦截器
 // 可以在接口响应后统一处理结果
 request.interceptors.response.use(
@@ -45,16 +47,16 @@ request.interceptors.response.use(
     error => {
         // 判断是否是401错误
         if (error.response && error.response.status === 401) {
+            if (is401Handled)
+            {
+                return Promise.reject(error); // 如果已经处理过 401 了，就直接拒绝这个错误
+            }
+            is401Handled = true; // 将标记设置为 true，表示已经处理过 401 错误
             ElMessage({
                 message: '无效的会话或者会话已过期，请重新登录',
                 type: 'warning',
             })
             router.push('/login') // 跳转到登录页
-            // // 跳转到登录页，保存当前页面路径
-            // router.replace({
-            //     path: '/login',
-            //     query: { redirect: router.currentRoute.fullPath }
-            // })
         }
         console.log('err' + error.response) // for debug
         return Promise.reject(error)

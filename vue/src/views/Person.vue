@@ -15,13 +15,47 @@
           <el-input v-model="form.sex"></el-input>
         </el-form-item>
         <el-form-item label="密码">
-           <el-input v-model="form.password" show-password></el-input>
+          <el-input v-model="form.password"
+                    type="password"
+                    show-password:show-password-icon="false"
+                    readonly
+                    tabindex="-1"
+                    >
+            <template #suffix>
+              <el-icon class="el-input__icon" @click="modifyPwdDialog"><edit /></el-icon>
+            </template>
+          </el-input>
         </el-form-item>
       </el-form>
       <div style="text-align: center">
         <el-button type="primary" @click="update">保存</el-button>
       </div>
     </el-card>
+
+    <!--  修改密码对话框 -->
+    <el-dialog v-model="modifyPwdDialogVisible" title="Tips" width="50%" :close-on-click-modal="false" :before-close="handleCloseUpdateDialog">
+      <el-form ref="passwordForm" :model="passwordForm" label-width="200px">
+        <el-form-item label="旧密码">
+          <el-input v-model="passwordForm.oldPassword" type="password" show-password></el-input>
+        </el-form-item>
+
+        <el-form-item label="新密码">
+          <el-input v-model="passwordForm.newPassword" type="password" show-password></el-input>
+        </el-form-item>
+
+        <el-form-item label="再次输入新密码">
+          <el-input v-model="passwordForm.confirmPassword" type="password" show-password></el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+      <span class="dialog-footer">
+        <el-button @click="cancel">取消</el-button>
+        <el-button type="primary" @click="updatePassword">
+          确认
+        </el-button>
+      </span>
+      </template>
+    </el-dialog>
 
   </div>
 </template>
@@ -37,7 +71,9 @@ export default {
       //鉴权用的用户信息
       userId:0,
       user:{},
-      form: {}
+      form: {},
+      modifyPwdDialogVisible:false,
+      passwordForm: {},
     }
   },
   created() {
@@ -53,10 +89,12 @@ export default {
     });
   },
   methods: {
-    handleAvatarSuccess(res) {
-      this.form.avatar = res.data
-      this.$message.success("上传成功")
-      // this.update()
+    modifyPwdDialog(){
+      console.log("点击修改")
+      //清除数据
+      this.passwordForm = {};
+      this.modifyPwdDialogVisible = true;
+
     },
     update() {
       request.put("/user", this.form).then(res => {
@@ -66,7 +104,7 @@ export default {
             type: "success",
             message: "更新成功"
           })
-          // 修改信息陈工之后向后端发送退出登录请求
+          // 修改信息成功之后向后端发送退出登录请求
           request.post("/user/logout").then((res) => {
             if (res.code === "0") {
               // 清除本地存储的用户认证信息
@@ -88,7 +126,68 @@ export default {
           })
         }
       })
+    },
+    updatePassword(){
+      // 检查两次输入的密码是否一致
+      if (this.passwordForm.newPassword !== this.passwordForm.confirmPassword) {
+        ElMessage({
+          message: "两次输入的密码不一致，请重新输入",
+          type: 'error',
+        })
+        //如果两次密码不一致 要重置整个form
+        //清除数据
+        this.passwordForm = {};
+        return;
+      }
+      // 检查输入的原密码是否正确
+      this.form.password = this.passwordForm.oldPassword;
+      request.post("/user/confirmPassword",this.form).then(async res => {
+        console.log(res)
+        if (res.code === '0') {
+          //如果原密码验证正确 则执行修改密码
+          this.form.password = this.passwordForm.confirmPassword;
+          request.put("/user", this.form).then(async res => {
+            console.log(res)
+            if (res.code === '0') {
+              ElMessage({
+                message: "修改成功",
+                type: 'success',
+              })
+
+            } else {
+              ElMessage({
+                message: "修改失败",
+                type: 'error',
+              })
+            }
+            // 关闭对话框之前把焦点从输入框中移除
+            this.modifyPwdDialogVisible = false;
+          })
+
+        } else {
+          ElMessage({
+            message: "原密码错误",
+            type: 'error',
+          })
+          //清除数据
+          this.passwordForm = {};
+        }
+      })
+
+
+    },
+    cancel() {
+      this.handleCloseUpdateDialog();
+    },
+    async  handleCloseUpdateDialog(){
+      console.log("点击关闭");
+      //清除数据
+      this.passwordForm = {};
+      //关闭对话框
+      this.modifyPwdDialogVisible = false;
+
     }
+
   }
 }
 </script>
@@ -116,5 +215,9 @@ export default {
   width: 178px;
   height: 178px;
   display: block;
+}
+.el-input__inner[type="password"] {
+  color: transparent;
+  text-shadow: 0 0 0 #333;
 }
 </style>

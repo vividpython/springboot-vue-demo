@@ -3,7 +3,7 @@
 
     <!--功能区域-->
     <div style="margin: 10px;padding: 0px">
-      <el-button color="#E0BF75" @click="add">新增</el-button>
+      <el-button color="#E0BF75" @click="add" v-if="user.role !== 3">新增</el-button>
       <el-button color="#958CDD" @click="exportExcel">导出</el-button>
       <el-button color="#FC9DA9" @click="load">刷新</el-button>
     </div>
@@ -43,29 +43,30 @@
     </div>
     <!--内容区域-->
     <el-table
+        v-loading="loading"
         :data="tableData"
-        style="width: 100%"
+        style="width: 100% "
         border
         class="table"
         :stripe="false"
         @selection-change="handleSelectionChange"
     >
       <el-table-column type="selection" width="55"/>
-      <el-table-column prop="id" label="ID" sortable/>
-      <el-table-column prop="itemNo" label="项目编号"/>
-      <el-table-column prop="materialNo" label="料号"/>
-      <el-table-column prop="documentName" label="文件名称"/>
-      <el-table-column prop="documentType" label="文件类型">
+      <el-table-column prop="id" label="ID" sortable />
+      <el-table-column prop="itemNo" label="项目编号" width="100"/>
+      <el-table-column prop="materialNo" label="料号" width="100"/>
+      <el-table-column prop="documentName" label="文件名称" show-overflow-tooltip/>
+      <el-table-column prop="documentType" label="文件类型" show-overflow-tooltip>
         <template #default="scope">
           {{ getDocumentType(scope.row.documentType) }}
         </template>
       </el-table-column>
-      <el-table-column prop="sequenceNo" label="文件序号"/>
-      <el-table-column prop="documentVersion" label="文件版本"/>
-      <el-table-column prop="documentPath" label="文件路径" :min-width="200" :ellipsis="true"
+      <el-table-column prop="sequenceNo" label="文件序号" show-overflow-tooltip/>
+      <el-table-column prop="documentVersion" label="文件版本" show-overflow-tooltip/>
+      <el-table-column prop="documentPath" label="文件路径" :min-width="200" show-overflow-tooltip :ellipsis="true"
                        style="white-space: nowrap; word-break: break-all;"/>
-      <el-table-column prop="createTime" label="创建时间"/>
-      <el-table-column prop="updateTime" label="更新时间"/>
+      <el-table-column prop="createTime" label="创建时间" sortable show-overflow-tooltip/>
+      <el-table-column prop="updateTime" label="更新时间" sortable  show-overflow-tooltip/>
       <el-table-column fixed="right" label="操作" width="220">
         <template #default="scope">
           <div class="btn-group">
@@ -109,7 +110,11 @@
     <el-dialog v-model="dialogVisible" title="Tips" width="50%" :before-close="handleCloseDialog">
       <el-form :model="form" label-width="120px">
         <el-form-item label="项目编号">
-          <el-input v-model="form.itemNo" style="width: 80%"/>
+          <el-input v-model="form.itemNo" style="width: 80%">
+            <template #suffix>
+              <el-icon class="el-input__icon" @click="handleIconClick"><search /></el-icon>
+            </template>
+          </el-input>
         </el-form-item>
         <el-form-item label="料号">
           <el-input v-model="form.materialNo" style="width: 80%"/>
@@ -191,9 +196,10 @@
     </el-dialog>
 
     <!--查看历史版本对话框-->
-    <el-dialog v-model="historyDialogVisible" title="Tips" width="80%" :close-on-click-modal="false"
+    <el-dialog v-model="historyDialogVisible" title="历史版本" width="80%" :close-on-click-modal="false"
                :before-close="handleDialogHisClose">
       <el-table
+          v-loading="loading"
           :data="historyTableData"
           style="width: 100%"
           border
@@ -201,19 +207,20 @@
           :stripe="false"
       >
         <el-table-column type="selection" width="55"/>
-        <el-table-column prop="id" label="ID" sortable/>
-        <el-table-column prop="itemNo" label="项目编号"/>
-        <el-table-column prop="materialNo" label="料号"/>
-        <el-table-column prop="documentName" label="文件名称"/>
-        <el-table-column prop="documentType" label="文件类型">
+        <el-table-column prop="id" label="ID" show-overflow-tooltip/>
+        <el-table-column prop="itemNo" label="项目编号" show-overflow-tooltip/>
+        <el-table-column prop="materialNo" label="料号" show-overflow-tooltip/>
+        <el-table-column prop="documentName" label="文件名称" show-overflow-tooltip/>
+        <el-table-column prop="documentType" label="文件类型" show-overflow-tooltip>
           <template #default="scope">
             {{ getDocumentType(scope.row.documentType) }}
           </template>
         </el-table-column>
-        <el-table-column prop="sequenceNo" label="文件序号"/>
-        <el-table-column prop="documentPath" label="文件路径"/>
-        <el-table-column prop="createTime" label="创建时间"/>
-        <el-table-column prop="updateTime" label="更新时间"/>
+        <el-table-column prop="sequenceNo" label="文件序号" show-overflow-tooltip/>
+        <el-table-column prop="documentVersion" label="文件版本" show-overflow-tooltip/>
+        <el-table-column prop="documentPath" label="文件路径" show-overflow-tooltip/>
+        <el-table-column prop="createTime" label="创建时间" show-overflow-tooltip/>
+        <el-table-column prop="updateTime" label="更新时间" show-overflow-tooltip/>
         <el-table-column fixed="right" label="操作" width="220">
           <template #default="scope">
             <div class="btn-group">
@@ -249,6 +256,70 @@
         />
       </div>
     </el-dialog>
+
+    <!--查看ItemMaster对话框-->
+    <el-dialog v-model="itemCodeSelectDialogVisable" title="料品档案" width="80%" :close-on-click-modal="false"
+               :before-close="handleDialogItemClose">
+      <div style="margin: 10px ; padding: 0px">
+        <el-form :inline="true" :model="ItemFormInline" class="demo-form-inline" ref="resetformInline">
+          <el-form-item label="料号">
+            <el-input v-model="ItemFormInline.code" placeholder="please input" clearable/>
+          </el-form-item>
+          <el-form-item label="料品名称">
+            <el-input v-model="ItemFormInline.name" placeholder="please input" clearable/>
+          </el-form-item>
+          <el-form-item label="规格(项目号)">
+            <el-input v-model="ItemFormInline.specs" placeholder="please input" clearable/>
+          </el-form-item>
+          <el-form-item>
+            <el-button color="#E0BF75" style="margin-left: 5px" :icon="Search" @click="itemMasterLoad">查询</el-button>
+            <el-button color="#E0BF75" style="margin-left: 5px" :icon="RefreshLeft" @click="reset">重置</el-button>
+          </el-form-item>
+        </el-form>
+      </div>
+      <el-table
+          v-loading="loading"
+          :data="itemMasterTableData"
+          style="width: 100%"
+          border
+          class="table"
+          :stripe="false"
+          @row-dblclick="handleRowDoubleClick"
+      >
+        <el-table-column prop="org" label="组织ID" sortable show-overflow-tooltip/>
+        <el-table-column prop="id" label="料品ID" show-overflow-tooltip/>
+        <el-table-column prop="code" label="料品编码" show-overflow-tooltip/>
+        <el-table-column prop="specs" label="规格(项目号)" show-overflow-tooltip/>
+        <el-table-column prop="name" label="料品名称" show-overflow-tooltip/>
+        <el-table-column prop="effective" label="有效性" show-overflow-tooltip>
+          <template #default="scope">
+            {{ getIsEffective(scope.row.effective) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="mainItemCategoryId" label="料品分类ID" show-overflow-tooltip/>
+        <el-table-column prop="state" label="料品状态">
+          <template #default="scope">
+            {{ getItemState(scope.row.state) }}
+          </template>
+        </el-table-column>
+
+        <el-table-column prop="itemFormAttribute" label="料品形态属性" show-overflow-tooltip/>
+
+      </el-table>
+      <!--分页条-->
+      <div style="margin: 10px ; padding: 0px">
+        <el-pagination
+            v-model:current-page="currentItemPage"
+            v-model:page-size="pageItemSize"
+            :page-sizes="[5, 10, 20, 40]"
+            layout="total, sizes, prev, pager, next, jumper"
+            :total="totalItem"
+            @size-change="handleItemSizeChange"
+            @current-change="handleItemCurrentChange"
+        />
+      </div>
+    </el-dialog>
+
   </div>
 </template>
 <script setup>
@@ -265,9 +336,10 @@ import * as FileSaver from 'file-saver';
 import {Base64} from "js-base64";
 import axios from "axios";
 import {ref} from "vue";
-
+import JSZip from 'jszip'
 let upload = ref();
 let updateDocument = ref();
+
 export default {
   name: 'Document',
   components: {},
@@ -276,9 +348,12 @@ export default {
       previewUrl: '',
       form: {},
       historyForm: {},
+      loading: false,
       previewForm: {},
       //搜索栏表单
       formInline: {},
+      //ItemMaster搜索表单栏
+      ItemFormInline: {},
       search: '',
 
       // //文件存储的真实路径 生产环境时应视需求修改
@@ -296,10 +371,15 @@ export default {
       currentHisPage: 1,
       pageHisSize: 10,
 
+      currentItemPage: 1,
+      pageItemSize: 10,
+
       //总条数
       total: 0,
 
       totalHis: 0,
+
+      totalItem: 0,
       // 新增数据的对话框显示控制
       dialogVisible: false,
       //更新文件版本对话框显示控制
@@ -308,6 +388,9 @@ export default {
       editDialogVisible: false,
       //查看历史版本对话框显示控制
       historyDialogVisible: false,
+
+      //控制新增信息时候得料号选择表格弹出
+      itemCodeSelectDialogVisable:false,
       fileData: '', // 表单数据+文件
       EditData: '',//编辑更新数据 新数据行+编辑行
       // importData:form,
@@ -318,6 +401,11 @@ export default {
       tableData: [],
 
       historyTableData: [],
+
+
+      itemMasterTableData: [],
+
+
       ids: [],
       selectedFiles: [],
       // filesUploadUrl:"http://" + window.server.filesUploadUrl + ":9090/files/uploadDrawingFiles"
@@ -352,17 +440,34 @@ export default {
         })
         return
       }
+      // for (const file of this.selectedFiles) {
+      //   const url_raw = window.server.filesUploadUrl + ":" + window.server.filesUploadPort + file.documentPath.replace(window.server.filesUploadUrl,"");
+      //   console.log(url_raw)
+      //   const url = "http://" + url_raw;
+      //   const link = document.createElement('a');
+      //   link.href = url;
+      //   link.target = "_blank";
+      //   link.download = url.split('/').pop(); // 获取文件名
+      //   link.click();
+      //   await new Promise(resolve => setTimeout(resolve, 1000)); // 等待1s
+      // }
+      const zip = new JSZip()
       for (const file of this.selectedFiles) {
-        const url_raw = window.server.filesUploadUrl + ":" + window.server.filesUploadPort + file.documentPath.replace(window.server.filesUploadUrl,"");
+        const url_raw = window.server.filesUploadUrl + ':' + window.server.filesUploadPort + file.documentPath.replace(window.server.filesUploadUrl, '')
         console.log(url_raw)
-        const url = "http://" + url_raw;
-        const link = document.createElement('a');
-        link.href = url;
-        link.target = "_blank";
-        link.download = url.split('/').pop(); // 获取文件名
-        link.click();
-        await new Promise(resolve => setTimeout(resolve, 1000)); // 等待1s
+        const url = 'http://' + url_raw
+        const response = await axios.get(url, { responseType: 'blob' })
+        const fileName = url.split('/').pop()
+        zip.file(fileName, response.data)
       }
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' })
+      const url = window.URL.createObjectURL(zipBlob)
+      const link = document.createElement('a')
+      link.href = url
+      link.target = '_blank'
+      link.download = 'drawings.zip' // 下载的文件名为 drawings.zip
+      link.click()
     },
     //批量删除方法
     handleDeleteDrawings() {
@@ -401,9 +506,48 @@ export default {
       console.log("this.selectedFiles:" + this.selectedFiles)
     },
 
+    handleIconClick() {
+      console.log('Search icon clicked!');
+      this.itemMasterLoad();
+      this.itemCodeSelectDialogVisable = true;
 
+    },
+
+    //双击两行的事件
+    handleRowDoubleClick(row) {
+      // 处理表格行双击事件
+      console.log('双击了表格行：', row);
+      this.form.itemNo = row['specs'];
+      this.form.materialNo = row['code'];
+      this.handleDialogItemClose();
+
+    },
+    async itemMasterLoad() {
+      try {
+
+        this.loading = true; // 显示Loading遮罩
+
+        //延迟执行
+        await this.delay(1000);
+
+        request.post(`/itemMaster/${this.currentItemPage}/${this.pageItemSize}`,JSON.parse(JSON.stringify(this.ItemFormInline))
+        ).then(res => {
+          console.log(res);
+          this.itemMasterTableData = res.data.records;
+          this.totalItem = res.data.total;
+
+
+        })
+      } catch (error) {
+        console.error(error)
+      } finally {
+        this.loading = false; // 隐藏Loading遮罩
+      }
+    },
     async historyLoad() {
       try {
+        console.log("loadingState:"+this.loading)
+        this.loading = true; // 显示Loading遮罩
 
         //延迟执行
         await this.delay(1000);
@@ -418,6 +562,8 @@ export default {
         })
       } catch (error) {
         console.error(error)
+      } finally {
+        this.loading = false; // 隐藏Loading遮罩
       }
     },
     //展示历史版本数据对话框点击事件
@@ -450,7 +596,10 @@ export default {
       this.historyTableData = [];
       this.historyDialogVisible = false;
     },
-
+    handleDialogItemClose(){
+      this.itemMasterTableData = [];
+      this.itemCodeSelectDialogVisable = false;
+    },
     handleCloseUpdateDialog() {
       // 调用 cancel 方法
       this.cancelUpate();
@@ -529,14 +678,48 @@ export default {
     },
 
     exportExcel() {
-      // 获取当前查询结果的数据
-      const data = this.tableData;
+      // 创建字段名映射表格
+      const mapping = {
+        id: '序号',
+        itemNo: '项目编号',
+        materialNo: '材料编号',
+        documentName: '文档名称',
+        documentType: '文档类型',
+        sequenceNo: '文档序号',
+        documentVersion: '文档版本',
+        documentPath: '文档路径',
+        createTime: '创建时间',
+        updateTime: '更新时间'
+      };
+      // 将表格数据中的字段名替换为中文名
+      const data = this.tableData.map(item => {
+        const newItem = {};
+        for (const key in item) {
+          if (Object.prototype.hasOwnProperty.call(item, key)) {
+            newItem[mapping[key] || key] = item[key];
+          }
+        }
+        return newItem;
+      });
       // 转换为Excel文件格式
       const ws = XLSX.utils.json_to_sheet(data);
+
+      ws['!cols'] = [
+        { wpx: 40},  // 第一列宽度为 100px
+        { wpx: 100},  // 第二列宽度为 200px
+        { wpx: 80 },  // 第三列宽度为 200px
+        { wpx: 200 },
+        { wpx: 60 },
+        { wpx: 60},
+        { wpx: 60},
+        { wpx: 200 },
+        { wpx: 120 },
+        { wpx: 80 },
+      ];
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
       // 保存文件
-      const fileName = '图纸数据.xlsx';
+      const fileName = '生产文件列表.xlsx';
       const blob = new Blob([XLSX.write(wb, {bookType: 'xlsx', type: 'array'})], {type: 'application/octet-stream'});
       FileSaver.saveAs(blob, fileName);
     },
@@ -556,7 +739,28 @@ export default {
           return ''
       }
     },
-
+    getIsEffective(type) {
+      switch (type) {
+        case 0:
+          return '失效'
+        case 1:
+          return '有效'
+        default:
+          return ''
+      }
+    },
+    getItemState(type) {
+      switch (type) {
+        case 0:
+          return '待核准'
+        case 1:
+          return '核准中'
+        case 2:
+          return '已核准'
+        default:
+          return ''
+      }
+    },
     filesUploadSuccess(res) {
       this.form.documentPath = res.data;
     },
@@ -566,6 +770,7 @@ export default {
     async load() {
       try {
 
+        this.loading = true; // 显示Loading遮罩
         //延迟执行
         await this.delay(1000);
 
@@ -579,12 +784,14 @@ export default {
         })
       } catch (error) {
         console.error(error)
+      } finally {
+        this.loading = false; // 隐藏Loading遮罩
       }
 
     },
 
     reset() {
-      this.formInline = {};
+      this.ItemFormInline = {};
       this.$refs["resetformInline"].resetFields();
     },
     add() {
@@ -692,7 +899,6 @@ export default {
       const fieldNames = {
         itemNo: '产品编号',
         documentType: '图纸类型',
-        materialNo: '料号',
         documentPath: '图纸文件',
       };
       const requiredFields = Object.keys(fieldNames);
@@ -800,6 +1006,13 @@ export default {
     },
     handleHisCurrentChange() {
       this.historyLoad()
+    },
+
+    handleItemSizeChange() {
+      this.itemMasterLoad()
+    },
+    handleItemCurrentChange() {
+      this.itemMasterLoad()
     },
 
     handleDelete(id, documentPath) {

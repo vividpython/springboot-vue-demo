@@ -13,9 +13,10 @@
           <el-icon><location /></el-icon>
           <span  class="fontClass">系统管理</span>
         </template>
+          <el-menu-item index="/depart" v-if="user.role === 1">部门管理</el-menu-item>
           <el-menu-item index="/user" v-if="user.role === 1">用户管理</el-menu-item>
           <el-menu-item index="/document">项目文件</el-menu-item>
-          <el-menu-item index="/drawing">生产图纸</el-menu-item>
+          <el-menu-item index="/drawing" v-if="user.role === 1">生产图纸</el-menu-item>
           <el-menu-item index="/news">新闻管理</el-menu-item>
       </el-sub-menu>
       <el-menu-item index="2">
@@ -70,7 +71,7 @@ export default {
 .fontClass{
   font-size:14px;
   font-weight: bolder;
-  font-family: Microsoft Yahei;
+  font-family: \5fae\8f6f\96c5\9ed1;
 }
 
 </style>

@@ -7,11 +7,6 @@ public class UserQueryParam {
     // 昵称
     private String nickName;
 
-    // 性别
-    private String sex;
-
-    // 地址
-    private String address;
 
     public String getUsername() {
         return username;
@@ -29,19 +24,4 @@ public class UserQueryParam {
         this.nickName = nickName;
     }
 
-    public String getSex() {
-        return sex;
-    }
-
-    public void setSex(String sex) {
-        this.sex = sex;
-    }
-
-    public String getAddress() {
-        return address;
-    }
-
-    public void setAddress(String address) {
-        this.address = address;
-    }
 }

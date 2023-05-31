@@ -6,6 +6,7 @@ import com.example.demo.entity.Document;
 import com.example.demo.service.DocumentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -17,7 +18,7 @@ public class DocumentController {
 
     private final static Logger logger = LoggerFactory.getLogger(DocumentController.class);
 
-    @Resource
+    @Autowired
     DocumentService documentService;
 
     //新增图纸信息

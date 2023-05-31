@@ -133,7 +133,7 @@ public class FileController {
 
         // 构造返回数据
         Map<String, String> resultMap = new HashMap<>();
-        resultMap.put("filePath", ip  + filePath);
+        resultMap.put("filePath", ip + ":" + nginx_port + filePath);
         resultMap.put("newVersion", NewDrawingVersion);
 
         return Result.success(resultMap);
@@ -168,11 +168,11 @@ public class FileController {
         String documentTypeName = "";
         // 根据类型值获取对应的汉字
         Map<Integer, String> documentTypeMap = new HashMap<>();
-        documentTypeMap.put(1, "材料清单");
-        documentTypeMap.put(2, "装配工艺图");
-        documentTypeMap.put(3, "电气接线图");
-        documentTypeMap.put(4, "变更通知单");
-        documentTypeMap.put(5, "技术交底单");
+        documentTypeMap.put(1, "BOM");
+        documentTypeMap.put(2, "APD");
+        documentTypeMap.put(3, "EWD");
+        documentTypeMap.put(4, "CN");
+        documentTypeMap.put(5, "TDF");
         if (documentTypeMap.containsKey(documentType)) {
             documentTypeName = documentTypeMap.get(documentType);
         }
@@ -195,7 +195,7 @@ public class FileController {
 
         // 构造返回数据
         Map<String, String> resultMap = new HashMap<>();
-        resultMap.put("filePath", ip  + filePath);
+        resultMap.put("filePath", ip + ":" + nginx_port + filePath);
         resultMap.put("newVersion", NewDocumentVersion);
 
         return Result.success(resultMap);
@@ -241,7 +241,7 @@ public class FileController {
                 + "A01" + originalFilename.substring(originalFilename.lastIndexOf("."));
         System.out.println("filePath:"+filePath);
         FileUtil.writeBytes(file.getBytes(), filePath);
-        return Result.success(ip  + filePath );
+        return Result.success(ip + ":" + nginx_port + filePath );
         // 保存文件
         //定义文件的唯一标识
         //String flag = IdUtil.fastSimpleUUID();
@@ -271,11 +271,11 @@ public class FileController {
         String documentTypeName = "";
         // 根据类型值获取对应的汉字
         Map<Integer, String> documentTypeMap = new HashMap<>();
-        documentTypeMap.put(1, "材料清单");
-        documentTypeMap.put(2, "装配工艺图");
-        documentTypeMap.put(3, "电气接线图");
-        documentTypeMap.put(4, "变更通知单");
-        documentTypeMap.put(5, "技术交底单");
+        documentTypeMap.put(1, "BOM");
+        documentTypeMap.put(2, "APD");
+        documentTypeMap.put(3, "EWD");
+        documentTypeMap.put(4, "CN");
+        documentTypeMap.put(5, "TDF");
         if (documentTypeMap.containsKey(documentType)) {
             documentTypeName = documentTypeMap.get(documentType);
         }
@@ -288,7 +288,7 @@ public class FileController {
             //判断一下有没有项目号  有项目号创建项目号路径
             folderPath +=   itemNo + "/" + materialNo + "/" +  documentTypeName;
         } else {
-            folderPath += "itemNo/"  + documentTypeName;
+            folderPath += itemNo + "/"  + documentTypeName;
         }
         // 保存文件
 
@@ -296,7 +296,7 @@ public class FileController {
                 + "A01" + originalFilename.substring(originalFilename.lastIndexOf("."));
         System.out.println("filePath:"+filePath);
         FileUtil.writeBytes(file.getBytes(), filePath);
-        return Result.success(ip  + filePath );
+        return Result.success(ip  + ":" + nginx_port + filePath );
         // 保存文件
         //定义文件的唯一标识
         //String flag = IdUtil.fastSimpleUUID();

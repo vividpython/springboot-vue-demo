@@ -3,29 +3,43 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.example.demo.mapper.UserMapper">
-    <!-- namespace路径根据自己而定 -->
-        <!-- 查询用户列表（带多条件） -->
-        <select id="findUserList" resultType="com.example.demo.entity.User">
-            select *
-            from user
-            <where>
-                1 = 1
-                <if test="userQueryParam != null">
-                    <if test="userQueryParam.username != null and userQueryParam.username != ''">
-                        and username like CONCAT('%',#{userQueryParam.username}, '%')
-                    </if>
-                    <if test="userQueryParam.nickname != null and userQueryParam.nickname != ''">
-                        and nickname like CONCAT('%',#{userQueryParam.nickname}, '%')
-                    </if>
-                    <if test="userQueryParam.sex != null and userQueryParam.sex != ''">
-                        and sex like CONCAT('%',#{userQueryParam.sex}, '%')
-                    </if>
-                    <if test="userQueryParam.address != null and userQueryParam.address != ''">
-                        and address like CONCAT('%',#{userQueryParam.address}, '%')
-                    </if>
+
+    <resultMap type="com.example.demo.entity.User" id="UserResult">
+        <result property="id"    column="id"    />
+        <result property="username"    column="username"    />
+        <result property="password"    column="password"    />
+        <result property="nickName"    column="nick_name"    />
+        <result property="img"    column="img"    />
+        <result property="role"    column="role"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="version"    column="version"    />
+        <result property="deleted"    column="deleted"    />
+        <result property="departId"    column="depart_id"    />
+        <association property="depart" javaType="com.example.demo.entity.Depart" resultMap="com.example.demo.mapper.DepartMapper.DepartResult"/>
+    </resultMap>
+    <sql id="selectUserVo">
+        select u.*,de.*
+        from user u
+                 left join depart de on u.depart_id = de.id
+    </sql>
+    <select id="findUserList" parameterType="com.example.demo.entity.User" resultMap="UserResult">
+        <include refid="selectUserVo"/>
+        <where>
+            <if test="userQueryParam != null">
+                <if test="userQueryParam.username != null and userQueryParam.username != ''">
+                    and u.username like CONCAT('%',#{userQueryParam.username}, '%')
                 </if>
-            </where>
-        </select>
+                <if test="userQueryParam.nickname != null and userQueryParam.nickname != ''">
+                    and u.nick_name like CONCAT('%',#{userQueryParam.nickName}, '%')
+                </if>
+            </if>
+        </where>
+    </select>
+    <select id="selectOneUser" parameterType="com.example.demo.entity.User" resultMap="UserResult">
+        <include refid="selectUserVo"/>
+        where u.username = #{username}
+    </select>
 </mapper>
 
 
