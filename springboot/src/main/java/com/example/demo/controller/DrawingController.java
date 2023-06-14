@@ -82,7 +82,7 @@ public class DrawingController {
                           @RequestBody(required = true) DrawingQueryParam drawingQueryParam) {
 
         Result<?> result=  drawingService.findDrawingList(index, size, drawingQueryParam);
-        System.out.println("this is pull test code...");
+        System.out.println("this is gitee test code...");
         return result;
     }
     //
