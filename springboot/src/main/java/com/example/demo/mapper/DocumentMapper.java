@@ -28,4 +28,6 @@ public interface DocumentMapper extends BaseMapper<Document> {
     List<Document> findDocumentMore(@Param("ids") List<Integer> ids);
 
     List<Document> findDocumentListByINTE(String itemNo, List<Integer> documentTypeList);
+
+    List<Document> findDocumentListByLikeINTE(String itemNo, List<Integer> documentTypeList);
 }

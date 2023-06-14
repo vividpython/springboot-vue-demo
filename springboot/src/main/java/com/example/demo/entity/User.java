@@ -33,6 +33,8 @@ public class User {
 
     private Integer departId;
 
+    private String permission;
+
     @TableField(exist = false)  // 此字段不更新
     private Depart depart;    // 员工部门
 }

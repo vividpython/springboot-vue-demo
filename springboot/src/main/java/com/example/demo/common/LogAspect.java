@@ -2,15 +2,10 @@ package com.example.demo.common;
 
 import com.alibaba.fastjson.JSONObject;
 
-//import iot.sixiang.license.jwt.UserUtils;
-import com.example.demo.controller.TokenController;
-import com.example.demo.controller.UserController;
 import com.example.demo.entity.SysOperLog;
 import com.example.demo.entity.User;
 import com.example.demo.service.SysOperLogService ;
 import com.example.demo.service.UserService;
-import com.example.demo.utils.ThreadLocalUtils;
-import io.jsonwebtoken.Jwts;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.Signature;

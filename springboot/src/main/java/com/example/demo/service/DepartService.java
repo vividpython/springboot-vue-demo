@@ -24,4 +24,6 @@ public interface DepartService extends IService<Depart> {
     Result<?> modifyDepart(Depart depart);
 
     Result<?> deleteDepart(Integer id);
+
+    Result<?> findByNameList(String departName);
 }

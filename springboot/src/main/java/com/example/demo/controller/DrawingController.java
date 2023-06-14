@@ -11,6 +11,7 @@ import com.example.demo.entity.EditDrawing;
 
 import com.example.demo.service.DrawingService;
 
+import org.apache.shiro.authz.annotation.RequiresRoles;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +21,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/drawing")
+@RequiresRoles("admin")
 public class DrawingController {
 
     private final static Logger logger = LoggerFactory.getLogger(DrawingController.class);

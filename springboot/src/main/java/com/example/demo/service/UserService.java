@@ -32,4 +32,8 @@ public interface UserService extends IService<User> {
     User getUserInfolog(Integer id);
 
     Result<?> confirmPassword(User user);
+
+    User getUserByUsername(String username);
+
+    Result<?> findListByName(String userName);
 }

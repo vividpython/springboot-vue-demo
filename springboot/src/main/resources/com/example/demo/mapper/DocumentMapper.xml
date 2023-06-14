@@ -3,59 +3,120 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.example.demo.mapper.DocumentMapper">
-    <select id="findDocumentList" resultType="com.example.demo.entity.Document">
-        select *
+
+    <resultMap type="com.example.demo.entity.Document" id="DocumentResult">
+        <result property="id"    column="id"    />
+        <result property="itemNo"    column="item_no"    />
+        <result property="materialNo"    column="material_no"    />
+        <result property="documentName"    column="document_name"    />
+        <result property="documentType"    column="document_type"    />
+        <result property="sequenceNo"    column="sequence_no"    />
+        <result property="documentVersion"    column="document_version"    />
+        <result property="documentPath"    column="document_path"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="userId"    column="user_id"    />
+        <association property="user" javaType="com.example.demo.entity.User" resultMap="com.example.demo.mapper.UserMapper.UserResult"/>
+    </resultMap>
+    <sql id="selectDocumentVo">
+        select d1.*, u.*
         from document d1
-        where id in (
-        select max(id)
-        from document
-        group by item_no, material_no, document_type, sequence_no
+                 inner join user u on d1.user_id = u.id
+    </sql>
+
+    <select id="findDocumentList" parameterType="com.example.demo.entity.Document" resultMap="DocumentResult">
+        <include refid="selectDocumentVo"/>
+        where d1.id in (
+        select max(d2.id)
+        from document d2
+        group by d2.item_no, d2.material_no, d2.document_type, d2.sequence_no
         )
         <if test="documentQueryParam != null">
+            <!-- 创建时间起始查询时间不为空时，添加起始时间条件 -->
+            <if test="documentQueryParam.createTimeStart != null">
+                and d1.create_time &gt;= #{documentQueryParam.createTimeStart}
+            </if>
+            <!-- 创建时间结束查询时间不为空时，添加结束时间条件 -->
+            <if test="documentQueryParam.createTimeEnd != null">
+                and d1.create_time &lt;= #{documentQueryParam.createTimeEnd}
+            </if>
             <if test="documentQueryParam.itemNo != null and documentQueryParam.itemNo != ''">
-                and item_no like CONCAT('%',#{documentQueryParam.itemNo}, '%')
+                and d1.item_no like CONCAT('%',#{documentQueryParam.itemNo}, '%')
             </if>
             <if test="documentQueryParam.materialNo != null and documentQueryParam.materialNo != ''">
-                and material_no like CONCAT('%',#{documentQueryParam.material_no}, '%')
+                and d1.material_no like CONCAT('%',#{documentQueryParam.material_no}, '%')
             </if>
-            <if test="documentQueryParam.documentType != null and documentQueryParam.documentType != ''">
-                and document_type = #{documentQueryParam.documentType}
+            <if test="documentQueryParam.userId != null and documentQueryParam.userId != ''">
+                and u.id like CONCAT('%',#{documentQueryParam.userId}, '%')
             </if>
+            <if test="documentQueryParam.documentType != null and documentQueryParam.documentType.size() > 0">
+                and d1.document_type in
+                <foreach item="item" index="index" collection="documentQueryParam.documentType" open="(" separator="," close=")">
+                    #{item}
+                </foreach>
+            </if>
+            <!-- <if test="documentQueryParam.documentType != null and documentQueryParam.documentType != ''"> -->
+            <!--     and d1.document_type = #{documentQueryParam.documentType} -->
+            <!-- </if> -->
         </if>
     </select>
-    <select id="findHistoryList" resultType="com.example.demo.entity.Document">
-        SELECT *
-        FROM document
-        WHERE item_no = #{document.itemNo}
-        AND sequence_no = #{document.sequenceNo}
-        AND document_type = #{document.documentType}
-        AND document_version &lt;&gt; #{document.documentVersion}
+
+
+    <select id="findHistoryList" parameterType="com.example.demo.entity.Document" resultMap="DocumentResult">
+        <include refid="selectDocumentVo"/>
+        WHERE d1.item_no = #{document.itemNo}
+        AND d1.sequence_no = #{document.sequenceNo}
+        AND d1.document_type = #{document.documentType}
+        AND d1.document_version &lt;&gt; #{document.documentVersion}
         <if test="document.materialNo == null">
-            AND material_no IS NULL
+            AND d1.material_no IS NULL
         </if>
         <if test="document.materialNo != null">
-            AND material_no = #{document.materialNo}
+            AND d1.material_no = #{document.materialNo}
         </if>
     </select>
-    <select id="findDocumentMore" resultType="com.example.demo.entity.Document">
-        SELECT * FROM document WHERE id IN
+
+
+    <select id="findDocumentMore" parameterType="java.util.List" resultMap="DocumentResult">
+        <include refid="selectDocumentVo"/>
+         WHERE d1.id IN
         <foreach collection="ids" index="index" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
     </select>
-    <select id="findDocumentListByINTE" resultType="com.example.demo.entity.Document">
-        select *
-        from document d1
-        where id in (
-        select max(id)
-        from document
-        group by item_no, material_no, document_type, sequence_no
+
+
+    <select id="findDocumentListByINTE" resultMap="DocumentResult">
+        <include refid="selectDocumentVo"/>
+        where d1.id in (
+        select max(d2.id)
+        from document d2
+        group by d2.item_no, d2.material_no, d2.document_type, d2.sequence_no
         )
         <if test="itemNo != null and itemNo != ''">
-            and item_no = #{itemNo}
+            and d1.item_no = #{itemNo}
         </if>
         <if test="documentTypeList != null and !documentTypeList.isEmpty()">
-            and document_type in
+            and d1.document_type in
+            <foreach collection="documentTypeList" item="documentType" open="(" separator="," close=")">
+                #{documentType}
+            </foreach>
+        </if>
+    </select>
+
+
+    <select id="findDocumentListByLikeINTE" resultMap="DocumentResult">
+        <include refid="selectDocumentVo"/>
+        where d1.id in(
+            select max(d2.id)
+            from document d2
+            group by d2.item_no, d2.material_no, d2.document_type, d2.sequence_no
+        )
+        <if test="itemNo != null and itemNo != ''">
+            and d1.item_no like CONCAT('%',#{itemNo}, '%')
+        </if>
+        <if test="documentTypeList != null and !documentTypeList.isEmpty()">
+            and d1.document_type in
             <foreach collection="documentTypeList" item="documentType" open="(" separator="," close=")">
                 #{documentType}
             </foreach>

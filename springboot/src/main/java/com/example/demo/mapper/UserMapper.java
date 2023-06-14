@@ -5,8 +5,11 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.demo.common.UserQueryParam;
+import com.example.demo.entity.Depart;
 import com.example.demo.entity.User;
 import org.springframework.stereotype.Repository;
+
+import java.util.List;
 
 @Repository
 @DS("mysql")
@@ -20,4 +23,7 @@ public interface UserMapper extends BaseMapper<User> {
     IPage<User> findUserList(Page<User> page, UserQueryParam userQueryParam);
 
     User selectOneUser(User user);
+    User selectByUsername(String username);
+
+    List<Depart> findListByName(String userName);
 }

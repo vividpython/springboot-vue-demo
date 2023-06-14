@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.demo.common.Result;
 import com.example.demo.common.DocumentQueryParam;
+import com.example.demo.common.StringProcessor;
 import com.example.demo.entity.Document;
 import com.example.demo.entity.Drawing;
 import com.example.demo.mapper.DocumentMapper;
@@ -60,7 +61,14 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
         if ( document.getId() != null ){
             document.setId(null);
             document.setCreateTime(null);
-            document.setUpdateTime(findDocumentCreateTime(document).getCreateTime());
+            document.setUpdateTime(null);
+            //文件的版本更新之后 需要将上一个版本的文件记录的更新时间设置为当前新版本新增的时间
+            //document.setUpdateTime(findDocumentCreateTime(document).getCreateTime());
+            Date newDate = new Date();
+            Document documentCreateTime = findDocumentCreateTime(document);
+            documentCreateTime.setUpdateTime(newDate);
+            Boolean aBoolean = modifyDocument(documentCreateTime);
+            System.out.println("更新日期成功：" + aBoolean);
             //如果料号为空 则为备产产品
             if (document.getMaterialNo() == null ){
                 //备产产品
@@ -106,7 +114,7 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
         // 构建条件对象, 查询是否已经存在用户名
         QueryWrapper<Document> wrapper = new QueryWrapper<>();
 
-        if (materialNo == null){
+        if (materialNo == null || materialNo.equals("")){
             wrapper.select("id");
             wrapper.eq("item_no", itemNo);
             wrapper.eq("document_type", documentType);
@@ -139,6 +147,162 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
             return this.baseMapper.insert(document) == 0 ? Result.error("201","添加用户失败") : Result.success();
         }
     }
+
+
+    @Override
+    public Result<?> insertDocument1(Document document) {
+        //插入数据的时候项目编号和文件类型不可以为空 备产的装置料号可以为空
+        if (document == null || document.getItemNo() == null || document.getDocumentType() == null) {
+            return Result.error("201", "参数错误");
+        }
+
+
+
+
+
+
+        String documentTypeValue = "";
+        //// 根据类型值获取对应的汉字
+        Map<Integer, String> documentTypeMap = new HashMap<>();
+        documentTypeMap.put(1, "BOM");
+        documentTypeMap.put(2, "APD");
+        documentTypeMap.put(3, "EWD");
+        documentTypeMap.put(4, "CN");
+        documentTypeMap.put(5, "TDF");
+        if (documentTypeMap.containsKey(document.getDocumentType())) {
+            documentTypeValue = documentTypeMap.get(document.getDocumentType());
+        }
+        System.out.println(document);
+        //如果料号为空 为备产产品
+        if (document.getMaterialNo() == null ){
+            //备产产品
+            document.setDocumentName(document.getItemNo() + "_" + documentTypeValue + "_" + document.getSequenceNo());
+        }else{
+            //如果是带料号的项目产品则 文件名为项目编号+料号+产品类型+序号
+            document.setDocumentName(document.getItemNo() + "_" + document.getMaterialNo() + "_" + documentTypeValue + "_" + document.getSequenceNo());
+        }
+
+
+
+
+        //项目编号
+        String itemNo = document.getItemNo();
+        // 产品料号
+        String materialNo = document.getMaterialNo();
+        //文件版本
+        String documentVersion = document.getDocumentVersion();
+
+        // 图纸类型
+        Integer documentType = document.getDocumentType();
+        //图纸版本
+        Integer sequenceNo = document.getSequenceNo();
+
+
+        // 构建条件对象, 查询是否已经存在用户名
+        QueryWrapper<Document> wrapper = new QueryWrapper<>();
+
+        if (materialNo == null || materialNo.equals("")){
+            wrapper.select("id");
+            wrapper.eq("item_no", itemNo);
+            wrapper.eq("document_type", documentType);
+            wrapper.eq("sequence_no", sequenceNo);
+            wrapper.eq("document_version", documentVersion);
+            wrapper.last("limit 1");
+        }else {
+            wrapper.select("id");
+            wrapper.eq("item_no", itemNo);
+            wrapper.eq("material_no", materialNo);
+            wrapper.eq("document_type", documentType);
+            wrapper.eq("sequence_no", sequenceNo);
+            wrapper.eq("document_version", documentVersion);
+            wrapper.last("limit 1");
+        }
+
+
+        // 查询判断, 如果查询出来有数据, 则不为null
+        if (this.baseMapper.selectOne(wrapper) != null)
+        {
+            return Result.error("201","该记录已存在");
+        }
+        else {
+            //如果可以插入该条数据需要去文件系统中把文件名改掉 改成自动生成的文件名
+            String documentName = document.getDocumentName();
+            String documentPath = document.getDocumentPath();
+            this.renameFile(documentName,documentPath);
+            document.setDocumentPath(renameDocumentPath(documentName,documentPath));
+            // 执行插入数据操作
+            return this.baseMapper.insert(document) == 0 ? Result.error("201","添加用户失败") : Result.success();
+        }
+    }
+
+    @Override
+    public Result confirmDocument(Document document) {
+        //插入数据的时候项目编号和文件类型不可以为空 备产的装置料号可以为空
+        if (document == null || document.getItemNo() == null || document.getDocumentType() == null) {
+            return Result.error("201", "参数错误");
+        }
+
+        String documentTypeValue = "";
+        //// 根据类型值获取对应的汉字
+        Map<Integer, String> documentTypeMap = new HashMap<>();
+        documentTypeMap.put(1, "BOM");
+        documentTypeMap.put(2, "APD");
+        documentTypeMap.put(3, "EWD");
+        documentTypeMap.put(4, "CN");
+        documentTypeMap.put(5, "TDF");
+        if (documentTypeMap.containsKey(document.getDocumentType())) {
+            documentTypeValue = documentTypeMap.get(document.getDocumentType());
+        }
+
+        //项目编号
+        String itemNo = document.getItemNo();
+        // 产品料号
+        String materialNo = document.getMaterialNo();
+        //文件版本
+        String documentVersion = document.getDocumentVersion();
+
+        // 图纸类型
+        Integer documentType = document.getDocumentType();
+        //图纸版本
+        Integer sequenceNo = document.getSequenceNo();
+
+
+        // 构建条件对象, 查询是否已经存在用户名
+        QueryWrapper<Document> wrapper = new QueryWrapper<>();
+
+        if (materialNo == null || materialNo.equals("")){
+            wrapper.select("id");
+            wrapper.eq("item_no", itemNo);
+            wrapper.eq("document_type", documentType);
+            wrapper.eq("sequence_no", sequenceNo);
+            wrapper.eq("document_version", documentVersion);
+            wrapper.last("limit 1");
+        }else {
+            wrapper.select("id");
+            wrapper.eq("item_no", itemNo);
+            wrapper.eq("material_no", materialNo);
+            wrapper.eq("document_type", documentType);
+            wrapper.eq("sequence_no", sequenceNo);
+            wrapper.eq("document_version", documentVersion);
+            wrapper.last("limit 1");
+        }
+        // 查询判断, 如果查询出来有数据, 则不为null
+        if (this.baseMapper.selectOne(wrapper) != null)
+        {
+            return Result.error("201","该文件已存在");
+        }
+        else {
+            return Result.success();
+        }
+    }
+
+
+    public Boolean modifyDocument(Document document) {
+        if (document == null || document.getId() == null || document.getId() <= 0) return false;
+        return this.baseMapper.updateById(document) == 0 ? false : true;
+    }
+
+
     //查询列表
     @Override
     public Result<?> findDocumentList(Integer index, Integer size, DocumentQueryParam documentQueryParam) {
@@ -164,12 +328,22 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
     public Document findDocumentCreateTime(Document document) {
 
         String documentVersionPre ="A" + String.format("%02d", Integer.parseInt(document.getDocumentVersion().substring(1))-1) ;
+        System.out.println("documentVersionPre" + documentVersionPre);
         QueryWrapper<Document> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("item_no", document.getItemNo())
-                .eq("material_no", document.getMaterialNo())
-                .eq("document_type", document.getDocumentType())
-                .eq("sequence_no", document.getSequenceNo())
-                .eq("document_version", documentVersionPre);
+        //
+        if (document.getMaterialNo() == null || document.getMaterialNo().equals("")){
+            queryWrapper.eq("item_no", document.getItemNo())
+                    .eq("document_type", document.getDocumentType())
+                    .eq("sequence_no", document.getSequenceNo())
+                    .eq("document_version", documentVersionPre);
+        }else {
+            queryWrapper.eq("item_no", document.getItemNo())
+                    .eq("material_no", document.getMaterialNo())
+                    .eq("document_type", document.getDocumentType())
+                    .eq("sequence_no", document.getSequenceNo())
+                    .eq("document_version", documentVersionPre);
+        }
+
 
         return this.baseMapper.selectOne(queryWrapper);
     }
@@ -303,6 +477,12 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
         }
         // 用户名
         List<Document> documentListByINTE = this.baseMapper.findDocumentListByINTE(itemNo,documentTypeList);
+        if (documentListByINTE.isEmpty()){
+            //如果获取的列表为空 则有可能是装置 则通过规则处理一下字符串再查询一下
+            String actualResult = StringProcessor.processString(itemNo);
+            List<Document> documentListByLikeINTE = this.baseMapper.findDocumentListByLikeINTE(actualResult, documentTypeList);
+            return Result.success(documentListByLikeINTE);
+        }
 
         return Result.success(documentListByINTE);
         //return null;

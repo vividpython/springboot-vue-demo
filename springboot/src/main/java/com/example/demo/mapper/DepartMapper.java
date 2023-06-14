@@ -10,6 +10,8 @@ import com.example.demo.entity.Depart;
 import com.example.demo.entity.User;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 @DS("mysql")
 public interface DepartMapper extends BaseMapper<Depart> {
@@ -20,4 +22,6 @@ public interface DepartMapper extends BaseMapper<Depart> {
      * @return
      */
     IPage<Depart> findDepartList(Page<Depart> page, DepartQueryParam departQueryParam);
+
+    List<Depart> findByNameList(String departName);
 }

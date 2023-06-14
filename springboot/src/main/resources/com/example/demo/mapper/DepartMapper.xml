@@ -25,6 +25,19 @@
             and deleted = 0
         </where>
     </select>
+
+    <select id="findByNameList" parameterType="java.lang.String" resultMap="DepartResult">
+        <include refid="selectDepartVo"/>
+        <where>
+            <if test="departName != null">
+                and name like CONCAT('%',#{departName}, '%')
+            </if>
+            and deleted = 0
+        </where>
+        order by id desc
+        limit 15
+    </select>
+
 </mapper>
 
 

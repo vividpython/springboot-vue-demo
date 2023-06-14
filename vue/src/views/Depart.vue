@@ -22,6 +22,7 @@
     </div>
     <!--内容区域-->
     <el-table
+        v-loading="loading"
         :data="tableData"
         style="width: 100%;"
         border
@@ -91,6 +92,7 @@ export default {
   data() {
     return {
       form: {},
+      loading: false,
       formInline: {},
       search: '',
       currentPage: 1,
@@ -119,7 +121,7 @@ export default {
     },
     async load() {
       try {
-
+        this.loading = true; // 显示Loading遮罩
         //延迟执行
         await this.delay(1000);
         console.log("this.formInline:"+this.formInline);
@@ -131,6 +133,8 @@ export default {
         })
       }catch (error){
         console.error(error)
+      }finally {
+        this.loading = false; // 隐藏Loading遮罩
       }
 
     },

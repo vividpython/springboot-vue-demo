@@ -3,7 +3,8 @@
 
     <!--功能区域-->
     <div style="margin: 10px;padding: 0px">
-      <el-button color="#E0BF75" @click="add" v-if="user.role !== 3">新增</el-button>
+      <el-button color="#E0BF75" @click="add" v-if="user.role !== 3">单选新增</el-button>
+      <el-button color="#E0BF75" @click="add1" v-if="user.role !== 3">多选新增</el-button>
       <el-button color="#958CDD" @click="exportExcel">导出</el-button>
       <el-button color="#FC9DA9" @click="load">刷新</el-button>
     </div>
@@ -16,14 +17,40 @@
         <el-form-item label="项目编号">
           <el-input v-model="formInline.itemNo" placeholder="Please input"/>
         </el-form-item>
+        <el-form-item label="创建人">
+          <el-autocomplete
+              v-model="userInputValue"
+              :fetch-suggestions="queryUserSearchAsync"
+              :popper-append-to-body="true"
+              :placeholder="'请输入用户名'"
+              :trigger-on-focus="true"
+              :value-key="'label'"
+              @select="handleUserSelect"
+          ></el-autocomplete>
+        </el-form-item>
         <el-form-item label="文件类型">
-          <el-select v-model="formInline.documentType" placeholder="Please select">
+          <el-select v-model="formInline.documentType"
+                     placeholder="Please select"
+                     collapse-tags
+                     collapse-tags-tooltip
+                     multiple >
             <el-option label="材料清单" value="1"/>
             <el-option label="装配工艺图" value="2"/>
             <el-option label="电气接线图" value="3"/>
             <el-option label="变更通知单" value="4"/>
             <el-option label="技术交底单" value="5"/>
           </el-select>
+        </el-form-item>
+        <el-form-item label="创建时间">
+          <el-date-picker
+              v-model="daterange"
+              type="datetimerange"
+              :shortcuts="shortcuts"
+              range-separator="至"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+          >
+          </el-date-picker>
         </el-form-item>
         <el-form-item>
           <el-button color="#E0BF75" style="margin-left: 5px" :icon="Search" @click="load">查询</el-button>
@@ -34,7 +61,7 @@
     <!--批量操作按钮区域-->
     <div style="margin: 10px ; padding: 0px">
       <el-button type="primary" @click="handleDownLoadDrawings">批量下载</el-button>
-      <el-popconfirm title="Are you sure to delete this?"
+      <el-popconfirm title="你确定要删除吗，删除之后数据将无法恢复?"
                      @confirm="handleDeleteDrawings">
         <template #reference>
           <el-button type="danger" v-if="user.role !== 3">批量删除</el-button>
@@ -63,6 +90,7 @@
       </el-table-column>
       <el-table-column prop="sequenceNo" label="文件序号" show-overflow-tooltip/>
       <el-table-column prop="documentVersion" label="文件版本" show-overflow-tooltip/>
+      <el-table-column prop="user.nickName" label="创建人" show-overflow-tooltip/>
       <el-table-column prop="documentPath" label="文件路径" :min-width="200" show-overflow-tooltip :ellipsis="true"
                        style="white-space: nowrap; word-break: break-all;"/>
       <el-table-column prop="createTime" label="创建时间" sortable show-overflow-tooltip/>
@@ -79,7 +107,7 @@
               >更新
               </el-button
               >
-              <el-popconfirm title="Are you sure to delete this?"
+              <el-popconfirm title="你确定要删除吗，删除之后数据将无法恢复?"
                              @confirm="handleDelete(scope.row.id,scope.row.documentPath)">
                 <template #reference>
                   <el-button type="danger" size="small" v-if="user.role !== 3">删除</el-button>
@@ -134,7 +162,8 @@
           <el-upload ref="upload"
                      :auto-upload="false"
                      :http-request="uploadFile"
-                     :disabled="isDisabledUpload">
+                     :disabled="isDisabledUpload"
+          >
             <template #trigger>
               <el-button type="primary">选择文件</el-button>
             </template>
@@ -161,7 +190,44 @@
       </span>
       </template>
     </el-dialog>
-
+    <!--  新增对话框多选 -->
+    <el-dialog v-model="dialogVisibleM" title="Tips" width="50%" :before-close="handleCloseMDialog">
+      <el-form :model="form" label-width="120px">
+        <el-form-item label="项目编号">
+          <el-input v-model="form.itemNo" style="width: 80%">
+            <template #suffix>
+              <el-icon class="el-input__icon" @click="handleIconClick"><search /></el-icon>
+            </template>
+          </el-input>
+        </el-form-item>
+        <el-form-item label="料号">
+          <el-input v-model="form.materialNo" style="width: 80%"/>
+        </el-form-item>
+          <el-form-item label="选择文件">
+            <el-upload ref="upload"
+                       class="upload-demo"
+                       style="display: inline"
+                       :auto-upload="false"
+                       :on-change="handleChange"
+                       :file-list="fileList"
+                       :disabled="isDisabledUploadM"
+                       :multiple="true"
+                       action="#">
+              <el-button  type="primary">选择文件</el-button>
+            </el-upload>
+          </el-form-item>
+          <el-form-item>
+            <el-button  type="primary" @click="uploadFileM">点击上传</el-button>
+          </el-form-item>
+      </el-form>
+      <template #footer>
+      <span class="dialog-footer">
+        <el-button type="primary" @click="closeM">
+          关闭
+        </el-button>
+      </span>
+      </template>
+    </el-dialog>
     <!--  更新文件对话框 -->
     <el-dialog v-model="updatedDialogVisible" title="Tips" width="50%" :before-close="handleCloseUpdateDialog">
       <el-form :model="form" label-width="120px">
@@ -219,6 +285,7 @@
         <el-table-column prop="sequenceNo" label="文件序号" show-overflow-tooltip/>
         <el-table-column prop="documentVersion" label="文件版本" show-overflow-tooltip/>
         <el-table-column prop="documentPath" label="文件路径" show-overflow-tooltip/>
+        <el-table-column prop="user.username" label="创建人" show-overflow-tooltip/>
         <el-table-column prop="createTime" label="创建时间" show-overflow-tooltip/>
         <el-table-column prop="updateTime" label="更新时间" show-overflow-tooltip/>
         <el-table-column fixed="right" label="操作" width="220">
@@ -232,7 +299,7 @@
                 <el-button size="small" @click="downloadFile(scope.row)">下载文件</el-button>
               </div>
               <div class="col">
-                <el-popconfirm title="Are you sure to delete this?"
+                <el-popconfirm title="你确定要删除吗，删除之后数据将无法恢复?"
                                @confirm="handleDelete(scope.row.id,scope.row.documentPath)">
                   <template #reference>
                     <el-button type="danger" size="small" v-if="user.role !== 3">删除</el-button>
@@ -337,6 +404,8 @@ import {Base64} from "js-base64";
 import axios from "axios";
 import {ref} from "vue";
 import JSZip from 'jszip'
+
+import moment from 'moment'
 let upload = ref();
 let updateDocument = ref();
 
@@ -346,12 +415,46 @@ export default {
   data() {
     return {
       previewUrl: '',
-      form: {},
+      form: {
+      },
+      fileList: [],
       historyForm: {},
       loading: false,
       previewForm: {},
       //搜索栏表单
+      daterange: '',
+      shortcuts: [
+        {
+          text: '最近一周',
+          value: () => {
+            const end = new Date()
+            const start = new Date()
+            start.setTime(start.getTime() - 3600 * 1000 * 24 * 7)
+            return [start, end]
+          },
+        },
+        {
+          text: '最近一个月',
+          value: () => {
+            const end = new Date()
+            const start = new Date()
+            start.setTime(start.getTime() - 3600 * 1000 * 24 * 30)
+            return [start, end]
+          },
+        },
+        {
+          text: '最近三个月',
+          value: () => {
+            const end = new Date()
+            const start = new Date()
+            start.setTime(start.getTime() - 3600 * 1000 * 24 * 90)
+            return [start, end]
+          },
+        },
+      ],
       formInline: {},
+      //搜索栏搜索用户输入框内容
+      userInputValue:'',
       //ItemMaster搜索表单栏
       ItemFormInline: {},
       search: '',
@@ -382,6 +485,7 @@ export default {
       totalItem: 0,
       // 新增数据的对话框显示控制
       dialogVisible: false,
+      dialogVisibleM: false,
       //更新文件版本对话框显示控制
       updatedDialogVisible: false,
       //修改文件信息对话框显示控制
@@ -413,7 +517,7 @@ export default {
   },
   created() {
 
-    request.get("/getUserInfo",
+    request.get("/user/getUserInfo",
     ).then(res => {
       this.userId = res.data;
       request.get("/user/" + this.userId
@@ -429,9 +533,36 @@ export default {
     isDisabledUpload() {
       const {itemNo, documentType} = this.form || {}
       return !itemNo?.trim() || !documentType
+    },
+    isDisabledUploadM() {
+      const { itemNo } = this.form || {};
+      return !itemNo?.trim();
     }
+
   },
   methods: {
+    handleUserSelect(item){
+      console.log("item.value"+item.value)  // 获取选中项的 value 值
+      this.formInline.userId = item.value  // 将选中项的 value 赋值给其它变量
+    },
+    async queryUserSearchAsync(queryString, cb) {
+      try {
+        console.log("this.userInputValue:" + this.userInputValue)
+        request.post("/user/findListByName",JSON.stringify(this.userInputValue)
+        ).then(res => {
+          console.log(res);
+          // 将查询结果作为选项返回给组件
+          this.options = res.data.map(item => ({ value: item.id, label: item.nickName }))
+          console.log("this.options:" + JSON.stringify(this.options) )
+          cb(this.options)
+        })
+
+      } catch (error) {
+        console.error(error)
+        cb([])
+      }
+    },
+
     async handleDownLoadDrawings() {
       if (!this.ids.length) {
         ElMessage({
@@ -453,7 +584,8 @@ export default {
       // }
       const zip = new JSZip()
       for (const file of this.selectedFiles) {
-        const url_raw = window.server.filesUploadUrl + ':' + window.server.filesUploadPort + file.documentPath.replace(window.server.filesUploadUrl, '')
+        console.log(file.documentPath.replace(window.server.filesUploadUrl, ''))
+        const url_raw = window.server.filesUploadUrl + file.documentPath.replace(window.server.filesUploadUrl, '')
         console.log(url_raw)
         const url = 'http://' + url_raw
         const response = await axios.get(url, { responseType: 'blob' })
@@ -482,16 +614,28 @@ export default {
             console.log(res);
             if (res.code === '0') {
               ElMessage({
-                message: '批量删除成功',
+                message: res.msg,
                 type: 'success',
               })
-              this.del_files(this.ids).then(() => {  // 等待删除操作完成再执行load()方法
+              let filePaths = res.data;
+              console.log("filePaths:" + filePaths)
+              this.del_files(filePaths).then(() => {  // 等待删除操作完成再执行load()方法
                 this.load(); // 更新表单数据
               });
+            }else if(res.code === '101'){
+              ElMessage({
+                message: res.msg,
+                type: 'warning',
+              })
+              let filePaths = res.data;
+              console.log("filePaths:" + filePaths)
+              this.del_files(filePaths).then(() => {  // 等待删除操作完成再执行load()方法
+                this.load(); // 更新表单数据
+              })
             } else {
               ElMessage({
-                message: '批量删除失败',
-                type: 'error',
+                message: res.msg,
+                type: 'info',
                 //
               })
             }
@@ -574,7 +718,7 @@ export default {
     },
     //文件下载
     downloadFile(row) {
-      const url_raw = window.server.filesUploadUrl + ":" + window.server.filesUploadPort + row.documentPath.replace(window.server.filesUploadUrl,"");
+      const url_raw = window.server.filesUploadUrl + row.documentPath.replace(window.server.filesUploadUrl,"");
       console.log(url_raw)
       const url = "http://" + url_raw;
       const link = document.createElement('a');
@@ -585,11 +729,34 @@ export default {
     //更新文件版本按钮
     updateVersion(row) {
       this.form = JSON.parse(JSON.stringify(row));
-      this.oldFilePath = this.form.documentPath;
-      this.updatedDialogVisible = true;
-      this.$nextTick(() => {
-        this.$refs["updateDocument"].clearFiles();
-      })
+      try {
+        request.post("/document/updateconfirm",this.form
+        ).then(res => {
+          console.log(res);
+          if (res.code === '0') {
+            ElMessage({
+              message: '更新成功',
+              type: 'success',
+            })
+            this.oldFilePath = this.form.documentPath;
+            this.updatedDialogVisible = true;
+            this.$nextTick(() => {
+              this.$refs["updateDocument"].clearFiles();
+            })
+          }else{
+
+              ElMessage({
+                message: res.msg,
+                type: 'error',
+
+              })
+          }
+
+
+        })
+      } catch (error) {
+      console.error(error)
+    }
     },
 
     handleDialogHisClose() {
@@ -612,6 +779,9 @@ export default {
     handleCloseDialog() {
       // 调用 cancel 方法
       this.cancel();
+    },
+    handleCloseMDialog(){
+      this.closeM();
     },
     updateFile(params) {
       this.fileData = new FormData()
@@ -641,10 +811,13 @@ export default {
       }).catch(() => {
       })
     },
+
     handleBeforeUpdate() {
       updateDocument.value.submit()
     },
+
     uploadFile(params) {
+
       this.fileData = new FormData()
       let string = JSON.stringify(this.form)
       this.fileData.append('document', string)
@@ -672,6 +845,210 @@ export default {
       }).catch(() => {
       })
     },
+
+    //通过onchanne触发方法获得文件列表
+    handleChange(file, fileList) {
+      this.fileList = fileList;
+      console.log(fileList)
+    },
+
+    async uploadFileM() {
+
+      const deleteIndexList = [];
+
+      // 定义一个数组，用于保存所有重复导入失败的文件名
+      const failedFiles = [];
+      // 定义一个数组，用于保存所有文件名错误的文件名
+      const ErrNameFiles = [];
+      // 定义一个数组，用于保存所有文件名错误的文件名
+      const successFiles = [];
+      for (let i = 0; i < this.fileList.length; i++) {
+        let item = this.fileList[i];
+        console.log(item.raw)
+        console.log(this.fileList[0])
+
+        // 获取当前文件名
+        const fileName = item.raw.name;
+        console.log("文件名称：" + fileName);
+        // 判断文件名中是否包含字符串，如果包含，根据映射关系设置 this.form.documentType 的值
+        if (fileName.indexOf('材料清单') !== -1) {
+          this.form.documentType = 1;
+        } else if (fileName.indexOf('装配工艺图') !== -1) {
+          this.form.documentType = 2;
+        } else if (fileName.indexOf('电气接线图') !== -1) {
+          this.form.documentType = 3;
+        } else if (fileName.indexOf('变更通知单') !== -1) {
+          this.form.documentType = 4;
+        } else if (fileName.indexOf('技术交底单') !== -1) {
+          this.form.documentType = 5;
+        }else{
+          //如果上传的文件命名不规范则 直接删除并提示错误即可
+          // 如果上传失败，将当前文件下标保存到 deleteIndexList 中
+          ErrNameFiles.push(fileName);
+          deleteIndexList.push(i);
+          // 文件名不符合要求，直接跳过
+          continue;
+        }
+
+
+        // 使用正则表达式匹配文件名中的数字
+        const regex = /_(\d+)\./;
+        const matches = fileName.match(regex);
+        if (matches && matches.length > 1) {
+          // 匹配成功，获取到数字，并根据数字设置 this.form.documentType 和 this.form.sequenceNo 的值
+          this.form.sequenceNo = parseInt(matches[1]);
+        }else{
+          //如果上传的文件命名不规范则 直接删除并提示错误即可
+          // 如果上传失败，将当前文件下标保存到 deleteIndexList 中
+          ErrNameFiles.push(fileName);
+          deleteIndexList.push(i);
+          // 文件名不符合要求，直接跳过
+          continue;
+        }
+
+        //重复导入文件验证 因为该方法已经不再对序号进行管理 所以如果发现某项目某料号下的某种类型的某个序号的图纸再次被上传 应该对其进行拒绝
+
+
+
+        console.log("this.form:" +  JSON.stringify(this.form))
+        //先默认form中的版本号为A01 用insert
+        this.form.documentVersion = "A01";
+        let res = await request.post("/document/confirm", this.form);
+        console.log("重复验证通过");
+        if (res.code === '0') {
+            //开始上传文件和生成记录
+
+          let fileData = new FormData()
+          let string = JSON.stringify(this.form)
+          fileData.append('document', string)
+          fileData.append('file', item.raw)
+          console.log("document:" + string)
+          try {
+            const response = await axios.request({
+              method: 'post',
+              url: 'http://' + window.server.filesUploadUrl + ':9090/files/uploadDocumentFiles',
+              headers: {
+                'Content-Type': 'multipart/form-data',
+                'token': JSON.parse(sessionStorage.getItem('token'))
+              },
+              data: fileData
+            });
+            let res = response.data;
+            if (res.code === '0') {
+              // 设置文件状态为已上传，并在文件名后面加上对号
+              item.status = 'success';
+
+              //上传成功之后把成功的文件加到列表中
+              successFiles.push(fileName);
+              // 如果是新增的文件，则默认其版本为A01
+              this.form.documentVersion = "A01";
+              this.form.documentPath = res.data;
+              this.oldFilePath = this.form.documentPath;
+
+              //开始执行记录插入及改文件名
+              // Convert documentType to an integer before submitting the form
+              this.form.documentType = parseInt(this.form.documentType);
+              console.log("this.form.documentType:" + this.form.documentType)
+              //新增的时候创建人的id就是当前用户的id
+              this.form.userId =  this.userId;
+              const fieldNames = {
+                itemNo: '产品编号',
+                documentType: '图纸类型',
+                documentPath: '图纸文件',
+              };
+              const requiredFields = Object.keys(fieldNames);
+              let isFormValid = true;
+              let missingFields = [];
+              for (let i = 0; i < requiredFields.length; i++) {
+                const field = requiredFields[i];
+                if (!this.form[field]) {
+                  isFormValid = false;
+                  missingFields.push(fieldNames[field]);
+                }
+              }
+              if (isFormValid) {
+                console.log("this.form:" +  JSON.stringify(this.form))
+                let res = await request.post("/document/insert", this.form);
+                console.log("进入新增");
+                if (res.code === '0') {
+                  ElMessage({
+                    message: '新增成功',
+                    type: 'success',
+                  })
+                } else {
+                  console.log("this.form" + this.form);
+                  ElMessage({
+                    message: res.msg,
+                    type: 'error',
+
+                  })
+                  //   如果新增失败 需要发起删除掉上传到文件服务器的文件
+                  console.log(this.oldFilePath)
+                  this.del_file(this.form.documentPath)
+                }
+              } else {
+                ElMessage({
+                  message: `缺少以下字段：${missingFields.join(', ')}`,
+                  type: 'warning',
+                })
+              }
+
+            }else {
+              item.status = 'error';
+            }
+          } catch (error) {
+            console.log(error);
+          }
+
+
+        } else {
+          // 如果上传失败，将当前文件下标保存到 deleteIndexList 中
+          failedFiles.push(fileName);
+          deleteIndexList.push(i);
+        }
+
+      }
+
+
+
+      // 按照逆序进行删除重复导入的文件
+      for (let j = deleteIndexList.length - 1; j >= 0; j--) {
+        const deleteIndex = deleteIndexList[j];
+        this.fileList.splice(deleteIndex, 1);
+      }
+
+
+      // 循环处理完所有文件之后，判断 failedFiles 是否为空
+      if (failedFiles.length > 0) {
+        // 如果有失败的文件，拼接成提示消息并弹窗
+        const errorMsg = `${failedFiles.join(', ')} 文件重复导入，上传失败`;
+        ElMessage({
+          message: errorMsg,
+          type: 'error',
+        });
+      }
+      // 循环处理完所有文件之后，判断 failedFiles 是否为空
+      if (ErrNameFiles.length > 0) {
+        // 如果有失败的文件，拼接成提示消息并弹窗
+        const errorMsg = `${ErrNameFiles.join(', ')} 文件名称不规范，上传失败`;
+        ElMessage({
+          message: errorMsg,
+          type: 'error',
+        });
+      }
+
+      // 循环处理完所有文件之后，判断 successFiles 是否为空
+      if (successFiles.length > 0) {
+        // 如果有失败的文件，拼接成提示消息并弹窗
+        const successMsg = `${successFiles.join(', ')} 文件上传成功`;
+        ElMessage({
+          message: successMsg,
+          type: 'success',
+        });
+      }
+
+    },
+
 
     handleBeforeUpload() {
       upload.value.submit()
@@ -768,6 +1145,13 @@ export default {
       return new Promise(resolve => setTimeout(resolve, time));
     },
     async load() {
+      console.log("this.daterange" + this.daterange);
+      const [start, end] = this.daterange
+      if (start && end) {
+        this.formInline.createTimeStart = moment(start).format('YYYY-MM-DD HH:mm:ss')
+        this.formInline.createTimeEnd = moment(end).format('YYYY-MM-DD HH:mm:ss')
+      }
+      console.log('this.formInline',JSON.stringify(this.formInline))
       try {
 
         this.loading = true; // 显示Loading遮罩
@@ -786,6 +1170,7 @@ export default {
         console.error(error)
       } finally {
         this.loading = false; // 隐藏Loading遮罩
+        this.reset();//查询结束后 清空查询条件
       }
 
     },
@@ -797,6 +1182,15 @@ export default {
     add() {
 
       this.dialogVisible = true;
+      this.form = {};
+
+      this.$nextTick(() => {
+        this.$refs["upload"].clearFiles();
+      })
+    },
+    add1() {
+      console.log("新增1")
+      this.dialogVisibleM = true;
       this.form = {};
 
       this.$nextTick(() => {
@@ -824,8 +1218,8 @@ export default {
       )
     },
     //批量删除文件
-    del_files(ids) {
-      return request.post("/files/delDocumentFiles", this.ids).then(res => {
+    del_files(filePaths) {
+      return request.post("/files/delDocumentFiles", filePaths).then(res => {
             console.log(res);
             if (res.code === '0') {
               ElMessage({
@@ -853,7 +1247,7 @@ export default {
         const fieldNames = {
           itemNo: '产品编号',
           documentType: '图纸类型',
-          materialNo: '料号',
+          //此处不设置料号 因为有的记录条目不填料号
           documentPath: '图纸文件',
         };
         const requiredFields = Object.keys(fieldNames);
@@ -895,6 +1289,8 @@ export default {
     save() {
       // Convert documentType to an integer before submitting the form
       this.form.documentType = parseInt(this.form.documentType);
+      //新增的时候创建人的id就是当前用户的id
+      this.form.userId =  this.userId;
       //新增
       const fieldNames = {
         itemNo: '产品编号',
@@ -943,7 +1339,10 @@ export default {
 
 
     },
-
+    closeM(){
+      this.dialogVisibleM = false;//关闭弹窗
+      this.load();
+    },
     cancelUpate() {
       //只要用户在取消之前进行了文件上传的工作 并且点击了取消 都要删除掉本次上传的文件
       if (this.form.documentPath !== this.oldFilePath) {
@@ -977,10 +1376,9 @@ export default {
         if (res.code === '0') {
 
           //查询成功之后 开始进行调用预览
-          this.previewUrl = "http://" + window.server.filesUploadUrl + ":"
-              + window.server.filesUploadPort
+          this.previewUrl = "http://" + window.server.filesUploadUrl
               + res.data.documentPath.replace(window.server.filesUploadUrl,"");;
-          console.log(this.previewUrl);
+          console.log("this.previewUrl" + this.previewUrl);
 
           window.open('http://' + window.server.filesUploadUrl  + ':'
               + window.server.kkfileviewPort +'/onlinePreview?url='
@@ -1017,6 +1415,7 @@ export default {
 
     handleDelete(id, documentPath) {
       console.log(id)
+      console.log("documentPath=" + documentPath)
       request.delete("/document/" + id).then(res => {
         console.log(res);
         if (res.code === '0') {
@@ -1027,7 +1426,7 @@ export default {
           this.del_file(documentPath)
         } else {
           ElMessage({
-            message: '删除失败',
+            message: res.msg,
             type: 'error',
           })
         }

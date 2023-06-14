@@ -2,6 +2,7 @@ package com.example.demo.common;
 
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class Result<T> implements Serializable {
@@ -56,10 +57,17 @@ public class Result<T> implements Serializable {
         result.setCode("0");
         return result;
     }
+    public static <T> Result<T> success(String code, String message,T data){
+        Result<T> result = new Result<T>(data);
+        result.setMsg(message);
+        result.setCode(code);
+        return result;
+    }
     public static Result error(String code,String msg){
         Result result = new Result();
         result.setMsg(msg);
         result.setCode(code);
         return result;
     }
+
 }

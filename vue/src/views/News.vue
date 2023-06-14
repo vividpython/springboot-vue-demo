@@ -208,7 +208,7 @@ export default {
 
 
       }else{
-        request.get("/getUserInfo",
+        request.get("/user/getUserInfo",
         ).then(res => {
           this.userId = res.data;
           request.get("/user/" + this.userId

@@ -25,6 +25,7 @@
     </div>
     <!--内容区域-->
     <el-table
+        v-loading="loading"
         :data="tableData"
         style="width: 100%;"
         border
@@ -43,6 +44,7 @@
         </template>
       </el-table-column>
       <el-table-column label="部门名称" prop="depart.name" />
+      <el-table-column prop="permission" label="权限"/>
       <el-table-column  label="头像">
         <template #default="scope">
           <el-image
@@ -91,6 +93,20 @@
         <el-form-item label="角色">
           <el-input v-model="form.role" style="width: 80%"/>
         </el-form-item>
+        <el-form-item label="权限">
+          <el-input v-model="form.permission" style="width: 80%"/>
+        </el-form-item>
+        <el-form-item label="部门名称" prop="departId">
+          <el-autocomplete
+              v-model="departInputValue"
+              :fetch-suggestions="queryDepartSearchAsync"
+              :popper-append-to-body="true"
+              :placeholder="'请输入内容'"
+              :trigger-on-focus="true"
+              :value-key="'label'"
+              @select="handleDepartSelect"
+          ></el-autocomplete>
+        </el-form-item>
         <el-form-item label="头像">
           <el-upload ref="upload" :action="filesUploadUrl"
                      :headers="headers"
@@ -129,8 +145,12 @@ export default {
   components: {},
   data() {
     return {
-      form: {},
+      form: {
+        departId: '' // 初始值为空字符串
+      },
+      loading: false,
       formInline: {},
+      departList:[],
       search: '',
       currentPage: 1,
       pageSize: 10,
@@ -143,23 +163,66 @@ export default {
       },
 
       tableData: [],
-      filesUploadUrl:"http://" + window.server.filesUploadUrl + ":9090/files/uploadUserIcons"
+      filesUploadUrl:"http://" + window.server.filesUploadUrl + ":9090/files/uploadUserIcons",
+      departInputValue: '',
+      options: []
     }
   },
   created() {
-    console.log(this.headers)
-    this.load()
+    console.log(this.headers);
+    this.load();
+    this.getDepartList();
   },
   methods: {
+
+    handleDepartSelect(item){
+      console.log("item.value"+item.value)  // 获取选中项的 value 值
+      this.form.departId = item.value  // 将选中项的 value 赋值给其它变量
+    },
+    async queryDepartSearchAsync(queryString, cb) {
+      try {
+        console.log("this.departInputValue:" + this.departInputValue)
+        request.post("/depart/findListByName",JSON.stringify(this.departInputValue)
+        ).then(res => {
+          console.log(res);
+          // 将查询结果作为选项返回给组件
+          this.options = res.data.map(item => ({ value: item.id, label: item.name }))
+          console.log("this.options:" + JSON.stringify(this.options) )
+          cb(this.options)
+        })
+
+      } catch (error) {
+        console.error(error)
+        cb([])
+      }
+    },
+
     filesUploadSuccess(res){
       this.form.img = res.data;
     },
     delay(time) {
       return new Promise(resolve => setTimeout(resolve, time));
     },
-    async load() {
+    async getDepartList() {
       try {
 
+        //延迟执行
+        await this.delay(1000);
+        //此处设置先按10个查
+        request.post(`/depart/1/10`
+        ).then(res => {
+          console.log(res);
+          this.departList = res.data.records;
+        })
+      }catch (error){
+        console.error(error)
+      }
+
+    },
+
+    async load() {
+      try {
+        this.loading = true; // 显示Loading遮罩
         //延迟执行
         await this.delay(1000);
         console.log("this.formInline:"+this.formInline);
@@ -172,6 +235,8 @@ export default {
         })
       }catch (error){
         console.error(error)
+      }finally {
+        this.loading = false; // 隐藏Loading遮罩
       }
 
     },
@@ -203,6 +268,7 @@ export default {
       })
     },
     save() {
+      //此处需要先对用户选择的部门信息进行
       //更新
       if (this.form.id) {
         request.put("/user", this.form).then(res => {
@@ -227,12 +293,12 @@ export default {
           console.log(res);
           if (res.code === '0') {
             ElMessage({
-              message: '新增成功',
+              message: res.msg,
               type: 'success',
             })
           } else {
             ElMessage({
-              message: '新增失败',
+              message: res.msg,
               type: 'error',
             })
           }

@@ -16,8 +16,11 @@
         <result property="version"    column="version"    />
         <result property="deleted"    column="deleted"    />
         <result property="departId"    column="depart_id"    />
+        <result property="permission"    column="permission"    />
         <association property="depart" javaType="com.example.demo.entity.Depart" resultMap="com.example.demo.mapper.DepartMapper.DepartResult"/>
     </resultMap>
+
+
     <sql id="selectUserVo">
         select u.*,de.*
         from user u
@@ -39,6 +42,22 @@
     <select id="selectOneUser" parameterType="com.example.demo.entity.User" resultMap="UserResult">
         <include refid="selectUserVo"/>
         where u.username = #{username}
+    </select>
+    <select id="selectByUsername" resultMap="UserResult">
+        <include refid="selectUserVo"/>
+        where u.username = #{username}
+    </select>
+
+    <select id="findListByName" parameterType="java.lang.String" resultMap="UserResult">
+        <include refid="selectUserVo"/>
+        <where>
+            <if test="userName != null">
+                and u.username like CONCAT('%',#{usertName}, '%')
+            </if>
+            and u.deleted = 0
+        </where>
+        order by u.id desc
+        limit 15
     </select>
 </mapper>
 

@@ -5,12 +5,15 @@ import com.example.demo.common.NewsQueryParam;
 import com.example.demo.common.Result;
 import com.example.demo.entity.News;
 import com.example.demo.service.NewsService;
+import org.apache.shiro.authz.annotation.Logical;
+import org.apache.shiro.authz.annotation.RequiresRoles;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 
 @RestController
 @RequestMapping("/news")
+@RequiresRoles(logical = Logical.OR, value = {"admin", "designer"})
 public class NewsController {
     @Resource
     NewsService newsService;

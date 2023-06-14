@@ -1,6 +1,41 @@
 package com.example.demo.common;
 
+import com.example.demo.entity.User;
+import com.fasterxml.jackson.annotation.JsonFormat;
+
+import java.util.Date;
+import java.util.List;
+
 public class DocumentQueryParam {
+
+    //项目编号
+    private String itemNo;
+
+    // 项目料号
+    private String materialNo;
+    //文件类型
+    private List<Integer> documentType;
+
+
+    //创建时间结束时间
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss",timezone = "GMT+8")
+    private Date createTimeEnd;
+
+    public Integer getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Integer userId) {
+        this.userId = userId;
+    }
+
+    //创建人
+    private Integer userId;
+
+
+    public Date getCreateTimeStart() {
+        return createTimeStart;
+    }
     public String getItemNo() {
         return itemNo;
     }
@@ -19,20 +54,31 @@ public class DocumentQueryParam {
 
 
 
-    //项目编号
-    private String itemNo;
 
-    public Integer getDocumentType() {
+    public void setCreateTimeStart(Date createTimeStart) {
+        this.createTimeStart = createTimeStart;
+    }
+
+    public Date getCreateTimeEnd() {
+        return createTimeEnd;
+    }
+
+    public void setCreateTimeEnd(Date createTimeEnd) {
+        this.createTimeEnd = createTimeEnd;
+    }
+
+    public List<Integer> getDocumentType() {
         return documentType;
     }
 
-    public void setDocumentType(Integer documentType) {
+    public void setDocumentType(List<Integer> documentType) {
         this.documentType = documentType;
     }
 
-    // 项目料号
-    private String materialNo;
-    //文件类型
-    private Integer documentType;
+
+    //创建时间开始时间
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss",timezone = "GMT+8")
+    private Date createTimeStart;
+
 
 }

@@ -8,12 +8,6 @@
         <el-form-item label="昵称">
           <el-input v-model="form.nickName"></el-input>
         </el-form-item>
-        <el-form-item label="年龄">
-          <el-input v-model="form.age"></el-input>
-        </el-form-item>
-        <el-form-item label="性别">
-          <el-input v-model="form.sex"></el-input>
-        </el-form-item>
         <el-form-item label="密码">
           <el-input v-model="form.password"
                     type="password"
@@ -77,7 +71,7 @@ export default {
     }
   },
   created() {
-    request.get("/getUserInfo",
+    request.get("/user/getUserInfo",
     ).then(res => {
       this.userId = res.data;
       request.get("/user/" + this.userId
@@ -105,7 +99,7 @@ export default {
             message: "更新成功"
           })
           // 修改信息成功之后向后端发送退出登录请求
-          request.post("/user/logout").then((res) => {
+          request.post("/logout").then((res) => {
             if (res.code === "0") {
               // 清除本地存储的用户认证信息
               sessionStorage.removeItem("token");

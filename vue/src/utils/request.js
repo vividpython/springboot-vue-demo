@@ -33,6 +33,7 @@ let is401Handled = false; // 添加标记，表示是否已经处理过 401 错�
 // 可以在接口响应后统一处理结果
 request.interceptors.response.use(
     response => {
+        //
         let res = response.data;
         // 如果是返回的文件
         if (response.config.responseType === 'blob') {
@@ -45,21 +46,24 @@ request.interceptors.response.use(
         return res;
     },
     error => {
-        // 判断是否是401错误
         if (error.response && error.response.status === 401) {
             if (is401Handled)
             {
                 return Promise.reject(error); // 如果已经处理过 401 了，就直接拒绝这个错误
             }
             is401Handled = true; // 将标记设置为 true，表示已经处理过 401 错误
-            ElMessage({
-                message: '无效的会话或者会话已过期，请重新登录',
-                type: 'warning',
-            })
-            router.push('/login') // 跳转到登录页
+            const res = error.response.data;
+            if (res.code === '401') {
+                ElMessage({
+                    message: res.msg,
+                    type: 'warning',
+                });
+                sessionStorage.removeItem("token")
+                router.push('/login');
+            }
         }
         console.log('err' + error.response) // for debug
-        return Promise.reject(error)
+        return Promise.reject(error);
     }
 )
 

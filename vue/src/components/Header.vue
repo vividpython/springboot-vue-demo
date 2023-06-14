@@ -39,7 +39,7 @@ export default {
     const token = sessionStorage.getItem("token");
     if (token) {
       // 如果本地存储中存在 token，说明用户已登录，从后端获取用户信息
-      request.get("/getUserInfo").then((res) => {
+      request.get("/user/getUserInfo").then((res) => {
         this.userId = res.data;
         request.get(`/user/${this.userId}`).then((res) => {
           if (res.code === "0") {
@@ -55,7 +55,7 @@ export default {
   methods: {
     handleLogout() {
       // 向后端发送退出登录请求
-      request.post("/user/logout").then((res) => {
+      request.post("/logout").then((res) => {
         if (res.code === "0") {
           // 清除本地存储的用户认证信息
           sessionStorage.removeItem("token");

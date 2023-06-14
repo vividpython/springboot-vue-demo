@@ -4,16 +4,40 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.demo.common.DocumentQueryParam;
 import com.example.demo.common.Result;
 import com.example.demo.entity.Document;
+import com.example.demo.entity.User;
 
 import java.util.List;
 
 public interface DocumentService extends IService<Document> {
     /**
-     * 添加用户
+     * 添加文件（单选添加 带文件序号管理）
      * @param Document
      * @return
      */
     Result insertDocument(Document Document);
+    /**
+     * @description: 添加文件（多选添加 不带文件序号管理）
+     * @param Document:
+     * @return com.example.demo.common.Result
+     * @author: Zheng
+     * @date: 2023/6/8 9:07
+     */
+
+    Result insertDocument1(Document Document);
+
+    /**
+     * @description: 重复上传文件验证 （多选添加使用）
+     * @param document:
+     * @return com.example.demo.common.Result
+     * @author: Zheng
+     * @date: 2023/6/8 9:08
+     */
+
+    Result confirmDocument(Document document);
+
+
+
+
     /**
      * 分页查询图纸列表
      * @param index 当前页

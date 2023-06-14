@@ -48,7 +48,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper,User> implements Use
         wrapper.last("limit 1");
 
         // 查询判断, 如果查询出来有数据, 则不为null
-        if (this.baseMapper.selectOne(wrapper) != null) Result.error("201","该用户名已存在");
+        if (this.baseMapper.selectOne(wrapper) != null)
+            return Result.error("201","该用户名已存在");
 
         // 执行插入数据操作
         return this.baseMapper.insert(user) == 0 ? Result.error("201","添加用户失败") : Result.success();
@@ -107,8 +108,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper,User> implements Use
         //wrapper.eq("username", user.getUsername());
 
         User res =  this.baseMapper.selectOneUser(user);
-        System.out.println("BC:"+BCrypt.checkpw(user.getPassword(), res.getPassword()));
-        if (res == null || !BCrypt.checkpw(user.getPassword(), res.getPassword())) {
+        //System.out.println("BC:"+BCrypt.checkpw(user.getPassword(), res.getPassword()));
+        if (res == null || res.getPassword() == null  || !BCrypt.checkpw(user.getPassword(), res.getPassword())) {
             return Result.error("201","用户名或密码错误");
         }
         return Result.success(res);
@@ -136,6 +137,19 @@ public class UserServiceImpl extends ServiceImpl<UserMapper,User> implements Use
         }else{
             return Result.success();
         }
+    }
+
+    @Override
+    public User getUserByUsername(String username) {
+        if (username == null || username == "") return null;
+        User res =  this.baseMapper.selectByUsername(username);
+        return res;
+    }
+
+    @Override
+    public Result<?> findListByName(String userName) {
+        if (userName == null ) return Result.error("201","参数错误");
+        return  Result.success(this.baseMapper.findListByName(userName)) ;
     }
 
 }

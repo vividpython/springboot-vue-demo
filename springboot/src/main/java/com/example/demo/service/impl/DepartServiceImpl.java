@@ -73,4 +73,10 @@ public class DepartServiceImpl extends ServiceImpl<DepartMapper, Depart> impleme
 
         return  this.baseMapper.deleteById(id) == 0 ? Result.error("201","删除失败"): Result.success();
     }
+
+    @Override
+    public Result<?> findByNameList(String departName) {
+        if (departName == null ) return Result.error("201","参数错误");
+        return  Result.success(this.baseMapper.findByNameList(departName)) ;
+    }
 }
