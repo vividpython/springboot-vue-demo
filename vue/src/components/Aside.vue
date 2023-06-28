@@ -2,11 +2,11 @@
 <div>
     <el-menu
         active-text-color="#E0C55C"
-        background-color="#88A799"
+        background-color="#3B455B"
         class="el-menu-vertical-demo"
         :default-active="path"
         router
-        text-color="#AF2A2B"
+        text-color="#FFFFFF"
     style="min-height: calc(100vh - 50px)">
       <el-sub-menu index="1">
         <template #title>

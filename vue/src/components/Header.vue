@@ -1,12 +1,19 @@
 <template>
-  <div style="height: 50px;line-height: 50px ; border-bottom: 1px solid #ccc ;display: flex">
-    <div style="width: 200px; padding-left: 30px;font-weight: bold;color: #8A77A5" >生产文件管理系统</div>
+  <div style=
+
+           "background-image: linear-gradient(to right, #3B455B, #5d5070);
+           height: 50px;
+           line-height: 50px ;
+           border-bottom: 1px solid #ccc ;
+           box-shadow: 0 0 10px 5px rgba(138, 119, 165, 0.5);
+           display: flex">
+    <div style="width: 200px; padding-left: 30px;font-weight: bold;color: white" >生产文件管理系统</div>
     <div style="flex: 1;"></div>
-    <div style="width: 100px;">
+    <div style="width: 100px; display: flex; align-items: center; justify-content: center;">
       <el-dropdown>
-    <span class="el-dropdown-link">
+    <span class="el-dropdown-link" style="font-weight: bold; color: white">
       {{user?.nickName}}
-      <el-icon class="el-icon--right">
+      <el-icon class="el-icon--right" style="font-weight: bold; color: white">
         <ArrowDown />
       </el-icon>
     </span>

@@ -18,6 +18,9 @@ import org.springframework.web.bind.annotation.*;
 import javax.annotation.Resource;
 import javax.print.Doc;
 import javax.servlet.http.HttpServletRequest;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,12 +42,59 @@ public class DocumentController {
     public Result<?> save(@RequestBody Document document) {
         return documentService.insertDocument(document);
     }
+
+
+
     //批量新增
     @RequiresRoles(logical = Logical.OR, value = {"admin", "designer"})
     @PostMapping("/insert")
-    public Result<?> save1(@RequestBody Document document) {
-
+    public Result<?> save1(@RequestBody Document document,HttpServletRequest request ) {
+        //获取当前用户的id 作为文件的创建者的id
+        String usernameFromToken = JwtUtils.getClaim(request.getHeader("token"),"username");
+        User userByUsername = userService.getUserByUsername(usernameFromToken);
+        Integer id = userByUsername.getId();
+        document.setUserId(id);
         return documentService.insertDocument1(document);
+    }
+    //批量新增
+    @RequiresRoles(logical = Logical.OR, value = {"admin", "designer"})
+    @PostMapping("/departConfirm")
+    public Result<?> departConfirm(@RequestBody Document document,HttpServletRequest request ){
+        //首先获取当前用户的部门是什么
+        String usernameFromToken = JwtUtils.getClaim(request.getHeader("token"),"username");
+        User userByUsername = userService.getUserByUsername(usernameFromToken);
+        Integer currentUserDepartId = userByUsername.getDepartId();
+        if (document != null && document.getItemNo() != null){
+            Integer fileCreateDepartId = documentService.departConfirm(document);
+            if (fileCreateDepartId == null) {
+                // 查询为空，进行相应处理
+                return Result.error("201", "项目信息查询失败");
+            } else {
+                // 查询结果不为空，进行其他操作
+                if (currentUserDepartId.equals(fileCreateDepartId)) {
+                    // 部门ID相同，返回成功
+                    return Result.success();
+                } else {
+                    // 部门ID不同，返回失败
+                    return Result.error("201", "非本部门项目，禁止更新");
+                }
+            }
+        }else{
+            return Result.error("201", "项目信息参数错误");
+        }
+    }
+
+
+    //更新（批量更新用 需计算当前版本）
+    @RequiresRoles(logical = Logical.OR, value = {"admin", "designer"})
+    @PostMapping("/updateM")
+    public Result<?> updateM(@RequestBody Document document,HttpServletRequest request) {
+        //获取当前用户的id 作为文件的更新者的id
+        String usernameFromToken = JwtUtils.getClaim(request.getHeader("token"),"username");
+        User userByUsername = userService.getUserByUsername(usernameFromToken);
+        Integer id = userByUsername.getId();
+        document.setSubId(id);
+        return documentService.updateDocumentM(document);
     }
     /**
      * @description: 此函数用在验证批量导入的时候文件是否重复的问题
@@ -61,6 +111,12 @@ public class DocumentController {
         return documentService.confirmDocument(document);
     }
 
+    @RequiresRoles(logical = Logical.OR, value = {"admin", "designer"})
+    @PostMapping("/updatestatus")
+    public Result<?> updatestatus(@RequestBody Document document) {
+        return documentService.updatestatus(document);
+
+    }
     //更新时候的用户验证
     @RequiresRoles(logical = Logical.OR, value = {"admin", "designer"})
     @PostMapping("/updateconfirm")
@@ -83,24 +139,52 @@ public class DocumentController {
 
     // 删除单个图纸信息
     @RequiresRoles(logical = Logical.OR, value = {"admin", "designer"})
-    @DeleteMapping("{id}")
-    public Result<?> deleteDocument(@PathVariable(value = "id") Integer id, HttpServletRequest request) {
-        String usernameFromToken = JwtUtils.getClaim(request.getHeader("token"),"username");
-        User userByUsername = userService.getUserByUsername(usernameFromToken);
-        Result<?> documentById = documentService.getDocumentById(id);
-        Object data = documentById.getData();
-        if (data instanceof Document) {
-            Document document = (Document) data;
-            Integer userId = document.getUserId();
-            if (userByUsername != null && userByUsername.getId() != null && userByUsername.getId().equals(userId)) {
-                return documentService.deleteDocument(id);
+    @DeleteMapping("{id}/{createTime}")
+    public Result<?> deleteDocument(@PathVariable(value = "id") String  id,
+                                    @PathVariable("createTime") String createTime,
+                                    HttpServletRequest request) {
+
+
+
+        // 将字符串转换为 LocalDateTime 对象
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        LocalDateTime targetTime = LocalDateTime.parse(createTime, formatter);
+
+        // 获取当前时间
+        LocalDateTime currentTime = LocalDateTime.now();
+
+        // 计算时间差
+        long daysBetween = ChronoUnit.DAYS.between(targetTime, currentTime);
+
+        // 判断时间差是否大于一天
+        if (daysBetween > 1) {
+            return Result.error("201", "创建时间超过一天,禁止删除");
+        }else {
+            //根据http请求获取请求者的身份
+            String usernameFromToken = JwtUtils.getClaim(request.getHeader("token"),"username");
+            User userByUsername = userService.getUserByUsername(usernameFromToken);
+
+
+
+            Result<?> documentById = documentService.getDocumentById(Integer.parseInt(id));
+            Object data = documentById.getData();
+            if (data instanceof Document) {
+                Document document = (Document) data;
+                //根据文件记录id获取该条记录的创建者的id
+                Integer userId = document.getUserId();
+
+
+                if (userByUsername != null && userByUsername.getId() != null && userByUsername.getId().equals(userId)) {
+                    return documentService.deleteDocument(Integer.parseInt(id));
+                } else {
+                    return Result.error("201", "非本人资源,禁止删除");
+                }
             } else {
-                return Result.error("201", "非本人资源,禁止删除");
+                // handle error here...
+                return Result.error("201", "系统出错 删除失败");
             }
-        } else {
-            // handle error here...
-            return Result.error("201", "系统出错 删除失败");
         }
+
     }
     // 删除多个图纸
     @RequiresRoles(logical = Logical.OR, value = {"admin", "designer"})

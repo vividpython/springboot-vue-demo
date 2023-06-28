@@ -16,12 +16,20 @@
         <result property="createTime"    column="create_time"    />
         <result property="updateTime"    column="update_time"    />
         <result property="userId"    column="user_id"    />
-        <association property="user" javaType="com.example.demo.entity.User" resultMap="com.example.demo.mapper.UserMapper.UserResult"/>
+        <result property="subId"    column="sub_id"    />
+        <result property="deleted"    column="deleted"    />
+        <association property="user"  column="user_id" select="getUserById"></association>
+        <association property="substitution"  column="sub_id" select="getUserById"></association>
     </resultMap>
+    <select id="getUserById" parameterType="int" resultMap="com.example.demo.mapper.UserMapper.UserResult">
+        select * from user where id=#{id}
+    </select>
     <sql id="selectDocumentVo">
-        select d1.*, u.*
-        from document d1
-                 inner join user u on d1.user_id = u.id
+        SELECT d1.*, u1.*, u2.*
+        FROM document d1
+                 INNER JOIN user u1 ON d1.user_id = u1.id
+                 LEFT JOIN user u2 ON d1.sub_id = u2.id
+
     </sql>
 
     <select id="findDocumentList" parameterType="com.example.demo.entity.Document" resultMap="DocumentResult">
@@ -105,12 +113,33 @@
     </select>
 
 
-    <select id="findDocumentListByLikeINTE" resultMap="DocumentResult">
-        <include refid="selectDocumentVo"/>
+    <select id="departConfirm"  parameterType="com.example.demo.entity.Document" resultType="java.lang.Integer">
+
+        SELECT u.depart_id
+        FROM document d1
+        INNER JOIN user u ON d1.user_id = u.id
         where d1.id in(
             select max(d2.id)
             from document d2
             group by d2.item_no, d2.material_no, d2.document_type, d2.sequence_no
+        )
+        <if test="itemNo != null and itemNo != ''">
+            and d1.item_no = #{itemNo}
+        </if>
+        <if test="materialNo!= null and materialNo != ''">
+            and d1.material_no = #{materialNo}
+        </if>
+        LIMIT 1
+    </select>
+
+
+
+    <select id="findDocumentListByLikeINTE" resultMap="DocumentResult">
+        <include refid="selectDocumentVo"/>
+        where d1.id in(
+        select max(d2.id)
+        from document d2
+        group by d2.item_no, d2.material_no, d2.document_type, d2.sequence_no
         )
         <if test="itemNo != null and itemNo != ''">
             and d1.item_no like CONCAT('%',#{itemNo}, '%')
@@ -122,6 +151,7 @@
             </foreach>
         </if>
     </select>
+
 
 </mapper>
 

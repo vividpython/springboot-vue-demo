@@ -30,4 +30,6 @@ public interface DocumentMapper extends BaseMapper<Document> {
     List<Document> findDocumentListByINTE(String itemNo, List<Integer> documentTypeList);
 
     List<Document> findDocumentListByLikeINTE(String itemNo, List<Integer> documentTypeList);
+
+    Integer departConfirm(Document document1);
 }

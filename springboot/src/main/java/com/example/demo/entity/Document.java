@@ -31,8 +31,16 @@ public class Document {
     //创建人id
     private Integer userId;
 
+    //变更人id
+    private Integer subId;
+
+    //默认值为0 表示启用 当值为1时表示弃用/作废
+    private Integer deleted;  // 逻辑删除
     //创建人
     @TableField(exist = false)  // 此字段不更新
     private User user;    // 创建人信息
+
+    @TableField(exist = false)  // 此字段不更新
+    private User substitution;    // 创建人信息
 
 }

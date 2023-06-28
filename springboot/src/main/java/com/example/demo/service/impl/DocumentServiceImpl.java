@@ -141,8 +141,8 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
             //如果可以插入该条数据需要去文件系统中把文件名改掉 改成自动生成的文件名
             String documentName = document.getDocumentName();
             String documentPath = document.getDocumentPath();
-            this.renameFile(documentName,documentPath);
-            document.setDocumentPath(renameDocumentPath(documentName,documentPath));
+            this.renameFile(documentName,documentPath,documentVersion);
+            document.setDocumentPath(renameDocumentPath(documentName,documentPath,documentVersion));
             // 执行插入数据操作
             return this.baseMapper.insert(document) == 0 ? Result.error("201","添加用户失败") : Result.success();
         }
@@ -228,10 +228,10 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
             //如果可以插入该条数据需要去文件系统中把文件名改掉 改成自动生成的文件名
             String documentName = document.getDocumentName();
             String documentPath = document.getDocumentPath();
-            this.renameFile(documentName,documentPath);
-            document.setDocumentPath(renameDocumentPath(documentName,documentPath));
+            this.renameFile(documentName,documentPath,documentVersion);
+            document.setDocumentPath(renameDocumentPath(documentName,documentPath,documentVersion));
             // 执行插入数据操作
-            return this.baseMapper.insert(document) == 0 ? Result.error("201","添加用户失败") : Result.success();
+            return this.baseMapper.insert(document) == 0 ? Result.error("201","添加记录失败") : Result.success();
         }
     }
 
@@ -294,6 +294,112 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
         else {
             return Result.success();
         }
+    }
+    /**
+     * @description: 更新（设计变更）
+     * @param document:
+     * @return com.example.demo.common.Result
+     * @author: Zheng
+     * @date: 2023/6/20 11:09
+     */
+
+    @Override
+    public Result updateDocumentM(Document document) {
+        //插入数据的时候项目编号和文件类型不可以为空 备产的装置料号可以为空
+        if (document == null || document.getItemNo() == null || document.getDocumentType() == null) {
+            return Result.error("201", "参数错误");
+        }
+
+
+        //项目编号
+        String itemNo = document.getItemNo();
+        // 产品料号
+        String materialNo = document.getMaterialNo();
+
+        // 图纸类型
+        Integer documentType = document.getDocumentType();
+        //图纸编号
+        Integer sequenceNo = document.getSequenceNo();
+
+
+        // 构建条件对象, 查询出当前文件的最新版本
+        QueryWrapper<Document> wrapper = new QueryWrapper<>();
+
+        if (materialNo == null || materialNo.equals("")){
+            wrapper.select("id");
+            wrapper.eq("item_no", itemNo);
+            wrapper.eq("document_type", documentType);
+            wrapper.eq("sequence_no", sequenceNo);
+            wrapper.orderByDesc("create_time");
+            wrapper.last("limit 1");
+        }else {
+            wrapper.select("id");
+            wrapper.eq("item_no", itemNo);
+            wrapper.eq("material_no", materialNo);
+            wrapper.eq("document_type", documentType);
+            wrapper.eq("sequence_no", sequenceNo);
+            wrapper.orderByDesc("create_time");
+            wrapper.last("limit 1");
+        }
+        // 查询判断, 如果查询出来有数据, 则不为null
+        if (this.baseMapper.selectOne(wrapper) != null)
+        {
+            //
+            Document document1 = this.baseMapper.selectById(this.baseMapper.selectOne(wrapper).getId());
+
+            //这里需要对时间进行处理 对被更新的记录需要把新版本文件的创建时间设置为它的更新时间
+            document.setCreateTime(null);
+            document.setUpdateTime(null);
+            //文件的版本更新之后 需要将上一个版本的文件记录的更新时间设置为当前新版本新增的时间
+            //document.setUpdateTime(findDocumentCreateTime(document).getCreateTime());
+            Date newDate = new Date();
+
+            document1.setUpdateTime(newDate);
+            Boolean aBoolean = modifyDocument(document1);
+            System.out.println("更新日期成功：" + aBoolean);
+
+
+            //获取到当前记录的最新版本
+            String LastVersion = document1.getDocumentVersion();
+            //获取到当前记录的创建人 把这个创建人当作更新文件的创建人 因为更新人作为操作人在前端已经赋值过了
+            Integer userId = document1.getUserId();
+            //把这个老版本的创建人id赋值给当前要更新的document中的创建人
+            document.setUserId(userId);
+            //最新版本的版本号+1
+            String documentVersion ="A" + String.format("%02d", Integer.parseInt(LastVersion.substring(1))+1) ;
+            document.setDocumentVersion(documentVersion);
+            //如果可以插入该条数据需要去文件系统中把文件名改掉 改成自动生成的文件名
+
+            String documentPath = document.getDocumentPath();
+            String documentName = documentPath.substring(documentPath.lastIndexOf("/") + 1);
+            // 获取不带后缀的文件名
+            int dotPos = documentName.lastIndexOf(".");
+            documentName = (dotPos > 0) ? documentName.substring(0, dotPos) : documentName;
+
+
+            //设置文件名
+            document.setDocumentName(documentName);
+
+
+            this.renameFile(documentName,documentPath,documentVersion);
+            //设置文件路径名
+            document.setDocumentPath(renameDocumentPath(documentName,documentPath,documentVersion));
+            // 执行插入数据操作
+            return this.baseMapper.insert(document) == 0 ? Result.error("201","更新文件失败") : Result.success();
+
+        }
+        else {
+            return Result.error("201","版本查询失败");
+        }
+    }
+
+    @Override
+    public Result updatestatus(Document document) {
+        if (document == null || document.getItemNo() == null || document.getDocumentType() == null) {
+            return Result.error("201", "参数错误");
+        }
+
+        return this.baseMapper.updateById(document) == 0 ? Result.error("201","更新文件状态失败") : Result.success();
     }
 
 
@@ -371,8 +477,14 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
 
         return Result.success(this.baseMapper.selectById(id));
     }
-    
-    
+
+    @Override
+    public Integer departConfirm(Document document) {
+        //首先获取提交的表单中的项目号和站料号
+        return this.baseMapper.departConfirm(document);
+    }
+
+
     /**
      * @description: 查询文件的历史版本
      * @param index: 
@@ -449,7 +561,7 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
 
             wrapper.eq("item_no", itemNo)
                     .eq("document_type", documentType)
-                    .likeRight("document_name", documentTypeValue + "-");
+                    .like("document_name", "%" + documentTypeValue + "_" + "%");
         }else {
             wrapper.eq("item_no", itemNo)
                     .eq("material_no", materialNo)
@@ -499,21 +611,28 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
         return document.getDocumentVersion();
     }
 
-    public String renameDocumentPath(String documentName, String documentPath) {
+    public String renameDocumentPath(String documentName, String documentPath,String documentVersion) {
 
         // 获取文件名
         String fileName = documentPath.substring(documentPath.lastIndexOf("/") + 1);
         // 获取文件所在文件夹的路径
         String folderPath = documentPath.substring(0, documentPath.lastIndexOf("/") + 1);
         // 获取文件后缀名
-        String fileSuffix = fileName.substring(fileName.lastIndexOf(".") - 3);
+        //String fileSuffix = fileName.substring(fileName.lastIndexOf(".") - 3);
+        String fileSuffix = ""; // 文件后缀名
+        int dotPos = fileName.lastIndexOf(".");
+        if (dotPos >= 0 && dotPos < fileName.length() - 1) {
+            fileSuffix = fileName.substring(dotPos);
+        }
         // 构造新的文件名
-        String newFileName = folderPath + documentName + fileSuffix;
+        String newFileName = folderPath + documentName  + documentVersion + fileSuffix;
 
         return newFileName;
 
     }
-    public void renameFile(String documentName, String documentPath) {
+
+
+    public void renameFile(String documentName, String documentPath,String documentVersion) {
 
         //String subPath = nginx_location
         //        +  documentPath.substring(documentPath.indexOf("files/") + 6);
@@ -524,9 +643,13 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
         // 获取文件所在文件夹的路径
         String folderPath = subPath.substring(0, subPath.lastIndexOf("/") + 1);
         // 获取文件后缀名
-        String fileSuffix = fileName.substring(fileName.lastIndexOf(".") - 3);
+        String fileSuffix = ""; // 文件后缀名
+        int dotPos = fileName.lastIndexOf(".");
+        if (dotPos >= 0 && dotPos < fileName.length() - 1) {
+            fileSuffix = fileName.substring(dotPos);
+        }
         // 构造新的文件名
-        String newFileName = folderPath + documentName + fileSuffix;
+        String newFileName = folderPath + documentName + documentVersion + fileSuffix;
 
 
 

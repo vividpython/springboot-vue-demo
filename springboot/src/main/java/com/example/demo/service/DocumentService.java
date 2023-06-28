@@ -35,9 +35,17 @@ public interface DocumentService extends IService<Document> {
 
     Result confirmDocument(Document document);
 
-
-
-
+    /**
+     * @description: 更新（设计变更）
+     * @param document: 
+     * @return com.example.demo.common.Result
+     * @author: Zheng
+     * @date: 2023/6/20 11:20
+     */
+    
+    Result updateDocumentM(Document document);
+    //更新图纸状态
+    Result updatestatus(Document document);
     /**
      * 分页查询图纸列表
      * @param index 当前页
@@ -62,10 +70,10 @@ public interface DocumentService extends IService<Document> {
 
 
 
+    Integer departConfirm( Document document);
 
 
-
-    Result<?> findHistoryList(Integer index, Integer size, Document Document);
+    Result<?> findHistoryList(Integer index, Integer size, Document document);
 
     Result<?> deleteDocumentMore(List<Integer> ids);
 

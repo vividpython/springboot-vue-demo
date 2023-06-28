@@ -25,5 +25,7 @@ public interface UserMapper extends BaseMapper<User> {
     User selectOneUser(User user);
     User selectByUsername(String username);
 
+    User selectByIdNow(Integer id);
+
     List<Depart> findListByName(String userName);
 }

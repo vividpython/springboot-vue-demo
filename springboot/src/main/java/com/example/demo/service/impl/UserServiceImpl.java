@@ -118,7 +118,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper,User> implements Use
     @Override
     public Result<?> getUserInfoById(Integer id) {
             if (id == null || id <= 0) return Result.error("201","参数错误");
-            return Result.success(this.baseMapper.selectById(id));
+            System.out.println(this.baseMapper.selectByIdNow(id));
+            return Result.success(this.baseMapper.selectByIdNow(id));
         }
 
     @Override

@@ -5,6 +5,9 @@
         <el-form-item label="用户名">
           <el-input v-model="form.username" disabled></el-input>
         </el-form-item>
+        <el-form-item label="部门">
+          <el-input v-model="form.depart.name" disabled></el-input>
+        </el-form-item>
         <el-form-item label="昵称">
           <el-input v-model="form.nickName"></el-input>
         </el-form-item>
@@ -65,7 +68,11 @@ export default {
       //鉴权用的用户信息
       userId:0,
       user:{},
-      form: {},
+      form: {
+        depart: {
+          name: ''
+        }
+      },
       modifyPwdDialogVisible:false,
       passwordForm: {},
     }

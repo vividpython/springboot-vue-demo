@@ -32,7 +32,9 @@
 <!--</div>-->
 <!--</template>-->
 <template>
-    <div style="width: 100%;height: 100vh;background-color: #8A77A5 ;overflow: hidden">
+    <div style="width: 100%;height: 100vh;
+    background-image: linear-gradient(to right, #3B455B, #5d5070);
+    overflow: hidden">
       <div style="width: 400px;margin: 150px auto">
         <div style="color: #cccccc ;font-size: 30px;text-align: center">{{ $t('login.title') }}</div>
         <el-form

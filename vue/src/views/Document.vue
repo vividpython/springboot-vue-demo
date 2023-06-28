@@ -3,10 +3,11 @@
 
     <!--功能区域-->
     <div style="margin: 10px;padding: 0px">
-      <el-button color="#E0BF75" @click="add" v-if="user.role !== 3">单选新增</el-button>
-      <el-button color="#E0BF75" @click="add1" v-if="user.role !== 3">多选新增</el-button>
-      <el-button color="#958CDD" @click="exportExcel">导出</el-button>
-      <el-button color="#FC9DA9" @click="load">刷新</el-button>
+      <el-button color="#3B455B" style="color: white" @click="add" v-if="user.role === 1">单选新增</el-button>
+      <el-button color="#3B455B" style="color: white" @click="add1" v-if="user.role !== 4">多选新增</el-button>
+      <el-button color="#3B455B" style="color: white" @click="updateM" v-if="user.role !== 4">设计变更</el-button>
+      <el-button color="#3B455B" style="color: white" @click="exportExcel">导出</el-button>
+      <el-button color="#3B455B" style="color: white" @click="load">刷新</el-button>
     </div>
     <!--搜索区域-->
     <div style="margin: 10px ; padding: 0px">
@@ -53,8 +54,10 @@
           </el-date-picker>
         </el-form-item>
         <el-form-item>
-          <el-button color="#E0BF75" style="margin-left: 5px" :icon="Search" @click="load">查询</el-button>
-          <el-button color="#E0BF75" style="margin-left: 5px" :icon="RefreshLeft" @click="reset">重置</el-button>
+          <el-button type="primary" style="margin-left: 5px" :icon="Search" @click="load">查询</el-button>
+          <el-button type="warning" style="margin-left: 5px" :icon="RefreshLeft" @click="reset">重置</el-button>
+
+
         </el-form-item>
       </el-form>
     </div>
@@ -62,9 +65,10 @@
     <div style="margin: 10px ; padding: 0px">
       <el-button type="primary" @click="handleDownLoadDrawings">批量下载</el-button>
       <el-popconfirm title="你确定要删除吗，删除之后数据将无法恢复?"
-                     @confirm="handleDeleteDrawings">
+                     @confirm="handleDeleteDrawings"
+                     v-if="user.role === 1">
         <template #reference>
-          <el-button type="danger" v-if="user.role !== 3">批量删除</el-button>
+          <el-button type="danger" >批量删除</el-button>
         </template>
       </el-popconfirm>
     </div>
@@ -91,32 +95,60 @@
       <el-table-column prop="sequenceNo" label="文件序号" show-overflow-tooltip/>
       <el-table-column prop="documentVersion" label="文件版本" show-overflow-tooltip/>
       <el-table-column prop="user.nickName" label="创建人" show-overflow-tooltip/>
+      <el-table-column prop="substitution.nickName" label="变更人" show-overflow-tooltip/>
       <el-table-column prop="documentPath" label="文件路径" :min-width="200" show-overflow-tooltip :ellipsis="true"
                        style="white-space: nowrap; word-break: break-all;"/>
+
+      <el-table-column
+          prop="deleted"
+          label="是否启用"
+          align="center"
+          sortable
+          show-overflow-tooltip
+      >
+        <template #default="scope">
+          <el-switch
+              v-model="scope.row.deleted"
+              :active-value="0"
+              :inactive-value="1"
+              size="large"
+              class="ml-2"
+              inline-prompt
+              active-text="启用"
+              inactive-text="作废"
+              :before-change="beforeChangeStatus.bind(this, scope.row)"
+              style="--el-switch-on-color: #409EFF; --el-switch-off-color: #ff4949"
+              @change="obsoleteChange(scope.row)">
+          </el-switch>
+        </template>
+      </el-table-column>
+
       <el-table-column prop="createTime" label="创建时间" sortable show-overflow-tooltip/>
       <el-table-column prop="updateTime" label="更新时间" sortable  show-overflow-tooltip/>
       <el-table-column fixed="right" label="操作" width="220">
         <template #default="scope">
           <div class="btn-group">
             <div class="col">
-              <el-button size="small" @click="previewFile(scope.row)"
+              <el-button size="small" color="#67C23A" style="color: white" @click="previewFile(scope.row)"
               >预览
               </el-button
               >
-              <el-button size="small" v-if="user.role !== 3" @click="updateVersion(scope.row)"
+              <!--//单个文件更新功能现只对管理员开放-->
+              <el-button size="small" style="color: white" v-if="user.role === 1" @click="updateVersion(scope.row)"
               >更新
               </el-button
               >
               <el-popconfirm title="你确定要删除吗，删除之后数据将无法恢复?"
-                             @confirm="handleDelete(scope.row.id,scope.row.documentPath)">
+                             @confirm="handleDelete(scope.row.id,scope.row.documentPath,scope.row.createTime)"
+                             v-if="user.role !== 4">
                 <template #reference>
-                  <el-button type="danger" size="small" v-if="user.role !== 3">删除</el-button>
+                  <el-button color="#f56c6c" style="color: white" size="small" >删除</el-button>
                 </template>
               </el-popconfirm>
             </div>
             <div class="col">
-              <el-button size="small" @click="downloadFile(scope.row)">下载文件</el-button>
-              <el-button size="small" @click="showHistory(scope.row)">历史版本</el-button>
+              <el-button size="small" color="#409EFF" style="color: white" @click="downloadFile(scope.row)">下载</el-button>
+              <el-button size="small" color="#909399" style="color: white" @click="showHistory(scope.row)">历史</el-button>
             </div>
           </div>
         </template>
@@ -169,7 +201,7 @@
             </template>
             <template #tip>
               <div class="el-upload__tip">
-                Any files with a size less than 10MB.
+               文件大小限制在50MB以内
               </div>
             </template>
 
@@ -213,7 +245,14 @@
                        :disabled="isDisabledUploadM"
                        :multiple="true"
                        action="#">
-              <el-button  type="primary">选择文件</el-button>
+              <template #trigger>
+                <el-button type="primary">选择文件</el-button>
+              </template>
+              <template #tip>
+                <div class="el-upload__tip">
+                 文件大小限制在50MB以内
+                </div>
+              </template>
             </el-upload>
           </el-form-item>
           <el-form-item>
@@ -228,6 +267,54 @@
       </span>
       </template>
     </el-dialog>
+
+    <!--  设计变更压缩包单选 -->
+    <el-dialog v-model="updatedDialogVisibleM" title="设计变更" width="50%" :before-close="handleCloseUpdateMDialog">
+      <el-form :model="form" label-width="120px">
+        <el-form-item label="项目编号">
+          <el-input v-model="form.itemNo" style="width: 80%">
+            <template #suffix>
+              <el-icon class="el-input__icon" @click="handleIconClick"><search /></el-icon>
+            </template>
+          </el-input>
+        </el-form-item>
+        <el-form-item label="料号">
+          <el-input v-model="form.materialNo" style="width: 80%"/>
+        </el-form-item>
+        <el-form-item label="选择文件">
+          <el-upload ref="upload"
+                     class="upload-demo"
+                     style="display: inline"
+                     :auto-upload="false"
+                     :on-change="handleChange"
+                     :file-list="fileList"
+                     :disabled="isDisabledUploadM"
+                     action="#">
+            <template #trigger>
+              <el-button type="primary">选择文件</el-button>
+            </template>
+            <template #tip>
+              <div class="el-upload__tip">
+               文件大小限制在50MB以内
+              </div>
+            </template>
+
+          </el-upload>
+        </el-form-item>
+
+        <el-form-item>
+          <el-button  type="primary" @click="updateFileM">点击上传</el-button>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+      <span class="dialog-footer">
+        <el-button type="primary" @click="closeupdatedDialog">
+          关闭
+        </el-button>
+      </span>
+      </template>
+    </el-dialog>
+
     <!--  更新文件对话框 -->
     <el-dialog v-model="updatedDialogVisible" title="Tips" width="50%" :before-close="handleCloseUpdateDialog">
       <el-form :model="form" label-width="120px">
@@ -240,7 +327,7 @@
             </template>
             <template #tip>
               <div class="el-upload__tip">
-                Any files with a size less than 10MB.
+               文件大小限制在50MB以内
               </div>
             </template>
           </el-upload>
@@ -286,6 +373,7 @@
         <el-table-column prop="documentVersion" label="文件版本" show-overflow-tooltip/>
         <el-table-column prop="documentPath" label="文件路径" show-overflow-tooltip/>
         <el-table-column prop="user.username" label="创建人" show-overflow-tooltip/>
+        <el-table-column prop="substitution.username" label="变更人" show-overflow-tooltip/>
         <el-table-column prop="createTime" label="创建时间" show-overflow-tooltip/>
         <el-table-column prop="updateTime" label="更新时间" show-overflow-tooltip/>
         <el-table-column fixed="right" label="操作" width="220">
@@ -300,9 +388,10 @@
               </div>
               <div class="col">
                 <el-popconfirm title="你确定要删除吗，删除之后数据将无法恢复?"
-                               @confirm="handleDelete(scope.row.id,scope.row.documentPath)">
+                               @confirm="handleDelete(scope.row.id,scope.row.documentPath)"
+                               v-if="user.role !== 4">
                   <template #reference>
-                    <el-button type="danger" size="small" v-if="user.role !== 3">删除</el-button>
+                    <el-button type="danger" size="small" >删除</el-button>
                   </template>
                 </el-popconfirm>
               </div>
@@ -488,6 +577,7 @@ export default {
       dialogVisibleM: false,
       //更新文件版本对话框显示控制
       updatedDialogVisible: false,
+      updatedDialogVisibleM: false,
       //修改文件信息对话框显示控制
       editDialogVisible: false,
       //查看历史版本对话框显示控制
@@ -506,6 +596,7 @@ export default {
 
       historyTableData: [],
 
+      errInsertUpdateFileList:[],
 
       itemMasterTableData: [],
 
@@ -679,13 +770,14 @@ export default {
           console.log(res);
           this.itemMasterTableData = res.data.records;
           this.totalItem = res.data.total;
-
+          this.$nextTick(() => {
+            // 隐藏Loading遮罩
+            this.loading = false;
+          });
 
         })
       } catch (error) {
         console.error(error)
-      } finally {
-        this.loading = false; // 隐藏Loading遮罩
       }
     },
     async historyLoad() {
@@ -783,6 +875,9 @@ export default {
     handleCloseMDialog(){
       this.closeM();
     },
+    handleCloseUpdateMDialog(){
+      this.closeupdatedDialog();
+    },
     updateFile(params) {
       this.fileData = new FormData()
       let string = JSON.stringify(this.form)
@@ -851,7 +946,73 @@ export default {
       this.fileList = fileList;
       console.log(fileList)
     },
+    obsoleteChange(row){
+      console.log("row" + row.deleted);
+      this.form = JSON.parse(JSON.stringify(row));
+      console.log("this.form.deleted" + this.form.deleted);
 
+      try {
+        request.post("/document/updatestatus",this.form
+        ).then(res => {
+          console.log(res);
+          if (res.code === '0') {
+            if (this.form.deleted === 1){
+              //表示用户想要作废文件
+              ElMessage({
+                message: '文件已作废',
+                type: 'success',
+              })
+            }else{
+              //表示用户想要启用文件
+              ElMessage({
+                message: '文件已启用',
+                type: 'success',
+              })
+            }
+
+          }else{
+
+            ElMessage({
+              message: res.msg,
+              type: 'error',
+
+            })
+          }
+
+
+        })
+      } catch (error) {
+        console.error(error)
+      }
+    },
+
+    beforeChangeStatus(row) {
+      this.form = JSON.parse(JSON.stringify(row));
+      return new Promise((resolve, reject) => {
+        try {
+          request.post("/document/updateconfirm",this.form
+          ).then(res => {
+
+            if (res.code === '0') {
+              //验证身份成功
+              resolve(true)
+            }else{
+
+              ElMessage({
+                message: res.msg,
+                type: 'error',
+
+              })
+              reject(false)
+            }
+
+
+          })
+        }catch (error) {
+          reject(false)
+        }
+      })
+    },
     async uploadFileM() {
 
       const deleteIndexList = [];
@@ -862,6 +1023,11 @@ export default {
       const ErrNameFiles = [];
       // 定义一个数组，用于保存所有文件名错误的文件名
       const successFiles = [];
+
+      // 创建包含五种类型的列表
+      const typeList = ["清单", "工艺", "图纸", "变更单", "交底单"];
+
+
       for (let i = 0; i < this.fileList.length; i++) {
         let item = this.fileList[i];
         console.log(item.raw)
@@ -871,17 +1037,19 @@ export default {
         const fileName = item.raw.name;
         console.log("文件名称：" + fileName);
         // 判断文件名中是否包含字符串，如果包含，根据映射关系设置 this.form.documentType 的值
-        if (fileName.indexOf('材料清单') !== -1) {
+        if (fileName.indexOf('清单') !== -1 || fileName.indexOf('材料清单') !== -1) {
+          console.log("matches.length");
           this.form.documentType = 1;
-        } else if (fileName.indexOf('装配工艺图') !== -1) {
+        } else if (fileName.indexOf('工艺') !== -1 || fileName.indexOf('装配工艺图') !== -1) {
           this.form.documentType = 2;
-        } else if (fileName.indexOf('电气接线图') !== -1) {
+        } else if (fileName.indexOf('图纸') !== -1 || fileName.indexOf('电气接线图') !== -1) {
           this.form.documentType = 3;
-        } else if (fileName.indexOf('变更通知单') !== -1) {
+        } else if (fileName.indexOf('变更单') !== -1 || fileName.indexOf('变更通知单') !== -1) {
           this.form.documentType = 4;
-        } else if (fileName.indexOf('技术交底单') !== -1) {
+        } else if (fileName.indexOf('交底单') !== -1 || fileName.indexOf('技术交底单') !== -1) {
           this.form.documentType = 5;
         }else{
+          console.log("名称错误");
           //如果上传的文件命名不规范则 直接删除并提示错误即可
           // 如果上传失败，将当前文件下标保存到 deleteIndexList 中
           ErrNameFiles.push(fileName);
@@ -898,6 +1066,7 @@ export default {
           // 匹配成功，获取到数字，并根据数字设置 this.form.documentType 和 this.form.sequenceNo 的值
           this.form.sequenceNo = parseInt(matches[1]);
         }else{
+          console.log("序号错误");
           //如果上传的文件命名不规范则 直接删除并提示错误即可
           // 如果上传失败，将当前文件下标保存到 deleteIndexList 中
           ErrNameFiles.push(fileName);
@@ -971,17 +1140,8 @@ export default {
                 let res = await request.post("/document/insert", this.form);
                 console.log("进入新增");
                 if (res.code === '0') {
-                  ElMessage({
-                    message: '新增成功',
-                    type: 'success',
-                  })
                 } else {
                   console.log("this.form" + this.form);
-                  ElMessage({
-                    message: res.msg,
-                    type: 'error',
-
-                  })
                   //   如果新增失败 需要发起删除掉上传到文件服务器的文件
                   console.log(this.oldFilePath)
                   this.del_file(this.form.documentPath)
@@ -1048,7 +1208,199 @@ export default {
       }
 
     },
+    async updateFileM(){
+      //开始上传文件和生成记录
 
+      let fileData = new FormData()
+      let string = JSON.stringify(this.form)
+      fileData.append('document', string)
+      fileData.append('file', this.fileList[0].raw)
+      console.log("document:" + string)
+
+      // 创建包含五种类型的列表
+      const typeList = ["清单", "工艺", "图纸", "变更单", "交底单"];
+      //此处应该加一层验证 验证一下当前用户的部门和创建该项目的用户是不是同一个部门的
+      let res = await request.post("/document/departConfirm", this.form);
+      if (res.code === '0') {
+        try{
+          try{
+            const response = await axios.request({
+              method: 'post',
+              url: 'http://' + window.server.filesUploadUrl + ':9090/files/updateDocumentFilesM',
+              headers: {
+                'Content-Type': 'multipart/form-data',
+                'token': JSON.parse(sessionStorage.getItem('token'))
+              },
+              data: fileData
+            })
+            //获取上传成功的文件的路径的列表
+            let updateFilesName = response.data;
+            //直接返回的数据是object类型的数据 需要转换为数据类型的数据
+            let dataArray = updateFilesName["data"];
+            console.log(dataArray.length);
+            //根据返回的文件路径去更新数据
+            for (let i = 0; i < dataArray.length; i++){
+
+              //首先把返回的文件存储路径赋值给当前要传回后端的实体
+              this.form.documentPath = dataArray[i];
+
+
+              // 判断文件名中是否包含字符串，如果包含，根据映射关系设置 this.form.documentType 的值
+              if (dataArray[i].indexOf('BOM') !== -1) {
+                console.log("matches.length");
+                this.form.documentType = 1;
+              } else if (dataArray[i].indexOf('APD') !== -1) {
+                console.log("TYPE:APD");
+                this.form.documentType = 2;
+              } else if (dataArray[i].indexOf('EWD') !== -1) {
+                this.form.documentType = 3;
+              } else if (dataArray[i].indexOf('CN') !== -1) {
+                this.form.documentType = 4;
+                console.log("TYPE:CN");
+              } else if (dataArray[i].indexOf('TDF') !== -1) {
+                this.form.documentType = 5;
+              }else{
+                console.log("名称错误");
+                // 文件名不符合要求，直接跳过
+                continue;
+              }
+
+              // 使用正则表达式匹配文件名中的数字
+              const regex = /_(\d+)\./;
+              const matches = dataArray[i].match(regex);
+              if (matches && matches.length > 1) {
+                // 匹配成功，获取到数字，并根据数字设置 this.form.documentType 和 this.form.sequenceNo 的值
+                console.log("序号获取成功");
+                this.form.sequenceNo = parseInt(matches[1]);
+              }else{
+                console.log("序号错误");
+                // 文件名不符合要求，直接跳过
+                continue;
+              }
+              // Convert documentType to an integer before submitting the form
+              this.form.documentType = parseInt(this.form.documentType);
+
+              //更新文件版本
+              const fieldNames = {
+                itemNo: '产品编号',
+              };
+              const requiredFields = Object.keys(fieldNames);
+              let isFormValid = true;
+              let missingFields = [];
+              for (let i = 0; i < requiredFields.length; i++) {
+                const field = requiredFields[i];
+                if (!this.form[field]) {
+                  isFormValid = false;
+                  missingFields.push(fieldNames[field]);
+                }
+              }
+              if (isFormValid) {
+                //这里需要对文件进行甄别 如果文件是变更通知单 则不是更新版本而是插入记录 如果是变更通知单的附件 也就是其他类型的文件则是更新版本
+                if (this.form.documentType === 4){
+                  //变更通知单不存在更新的情况 所以这里要直接设置变更通知单的版本为A01
+                  this.form.documentVersion = "A01";
+                  console.log("开始更新");
+                  try{
+                    const res = await request.post("/document/insert", this.form);
+
+                    if (res.code === '0') {
+                      ElMessage({
+                        message: typeList[this.form.documentType - 1] + '变更单保存成功',
+                        type: 'success',
+                      })
+                    } else {
+
+                      //如果变更单保存失败要去找到这个文件把它重新删除
+                      //"localhost:80/files/WLMMXS2023030101/41601-3987/BOM/WLMMXS2023030101_41601-3987_BOM_1.docx"
+                      this.errInsertUpdateFileList.push(dataArray[i]);
+                      console.log(dataArray[i]);
+                      console.log("变更通知单插入失败")
+                      console.log("this.errInsertUpdateFileList" + this.errInsertUpdateFileList);
+                      ElMessage({
+                        message: typeList[this.form.documentType - 1] + '保存失败',
+                        type: 'error',
+                      })
+                    }
+                  }catch (error) {
+                    console.log(error)
+                  }
+
+                }else{
+                  try{
+
+                    const res = await request.post("/document/updateM", this.form);
+                    if (res.code === '0') {
+                      ElMessage({
+                        message: typeList[this.form.documentType - 1] + '文件更新成功',
+                        type: 'success',
+                      })
+                    } else {
+                      //如果变更单保存失败要去找到这个文件把它重新删除
+                      console.log("变更附件插入失败")
+                      console.log(dataArray[i]);
+                      //"localhost:80/files/WLMMXS2023030101/41601-3987/BOM/WLMMXS2023030101_41601-3987_BOM_1.docx"
+                      this.errInsertUpdateFileList.push(dataArray[i])
+
+                      ElMessage({
+                        message: typeList[this.form.documentType - 1] + '保存失败',
+                        type: 'error',
+                      })
+                    }
+                  }catch (error){
+                    console.log(error)
+                  }
+
+                }
+
+
+              } else {
+                ElMessage({
+                  message: `缺少以下字段：${missingFields.join(', ')}`,
+                  type: 'warning',
+                })
+              }
+
+            }
+
+
+            console.log("this.errInsertUpdateFileList" + this.errInsertUpdateFileList);
+
+
+            // 循环处理完所有文件之后，判断 failedFiles 是否为空
+            if (this.errInsertUpdateFileList.length > 0) {
+
+
+
+
+              this.del_files(this.errInsertUpdateFileList)
+              // 如果有失败的文件，拼接成提示消息并弹窗
+              // const errorMsg = `${this.errInsertUpdateFileList.join(', ')} 文件导入失败`;
+              // //此处
+              // ElMessage({
+              //   message: errorMsg,
+              //   type: 'error',
+              //   duration: 5000, // 设置为5秒
+              // });
+            }
+            //删除完之后把这个列表清空
+            this.errInsertUpdateFileList = [];
+          }catch (error){
+            ElMessage({
+              message: error.response.data.msg,
+              type: 'error',
+            })
+          }
+        }catch (error){
+          console.error(error)
+        }
+      } else {
+        ElMessage({
+          message: res.msg,
+          type: 'success',
+        })
+      }
+
+    },
 
     handleBeforeUpload() {
       upload.value.submit()
@@ -1197,6 +1549,16 @@ export default {
         this.$refs["upload"].clearFiles();
       })
     },
+    //设计变更
+    updateM(){
+      console.log("设计变更")
+      this.updatedDialogVisibleM = true;
+      this.form = {};
+      this.fileList =[];
+      this.$nextTick(() => {
+        this.$refs["upload"].clearFiles();
+      })
+    },
     //删除单个文件
     del_file(path) {
       console.log("path" + path)
@@ -1223,8 +1585,8 @@ export default {
             console.log(res);
             if (res.code === '0') {
               ElMessage({
-                message: 'nginx文件同步成功',
-                type: 'success',
+                message: 'nginx文件同步已同步',
+                type: 'info',
               })
             } else {
               ElMessage({
@@ -1341,8 +1703,15 @@ export default {
     },
     closeM(){
       this.dialogVisibleM = false;//关闭弹窗
+      this.fileList =[];
       this.load();
     },
+    closeupdatedDialog(){
+      this.updatedDialogVisibleM = false;//关闭弹窗
+      this.fileList =[];
+      this.load();
+    },
+
     cancelUpate() {
       //只要用户在取消之前进行了文件上传的工作 并且点击了取消 都要删除掉本次上传的文件
       if (this.form.documentPath !== this.oldFilePath) {
@@ -1413,10 +1782,11 @@ export default {
       this.itemMasterLoad()
     },
 
-    handleDelete(id, documentPath) {
+    handleDelete(id, documentPath,createTime) {
       console.log(id)
       console.log("documentPath=" + documentPath)
-      request.delete("/document/" + id).then(res => {
+      console.log("createTime=" + createTime)
+      request.delete(`/document/${id}/${createTime}`).then(res => {
         console.log(res);
         if (res.code === '0') {
           ElMessage({

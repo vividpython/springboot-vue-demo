@@ -1,7 +1,7 @@
 <configuration>
     <property name="LOG_PATTERN" value="%date{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n" />
-    <property name="FILE_PATH" value="C:/logs/springboot-demo/demo.%d{yyyy-MM-dd}.%i.log" />
-    <!-- <property name="FILE_PATH" value="/opt/server/logs/springboot-demo/demo.%d{yyyy-MM-dd}.%i.log" /> -->
+    <!-- <property name="FILE_PATH" value="C:/logs/springboot-demo/demo.%d{yyyy-MM-dd}.%i.log" /> -->
+    <property name="FILE_PATH" value="/opt/server/logs/springboot-demo/demo.%d{yyyy-MM-dd}.%i.log" />
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <!-- 按照上面配置的LOG_PATTERN来打印日志 -->

@@ -3,10 +3,10 @@
 
     <!--功能区域-->
     <div style="margin: 10px;padding: 0px">
-      <el-button color="#E0BF75" @click="add">新增</el-button>
-      <el-button color="#958CDD">导入</el-button>
-      <el-button color="#FFDDAB">导出</el-button>
-      <el-button color="#FC9DA9">刷新</el-button>
+      <el-button color="#3B455B" @click="add">新增</el-button>
+      <el-button color="#3B455B">导入</el-button>
+      <el-button color="#3B455B">导出</el-button>
+      <el-button color="#3B455B">刷新</el-button>
     </div>
     <!--搜索区域-->
     <div style="margin: 10px ; padding: 0px">
@@ -39,8 +39,9 @@
       <el-table-column  label="角色">
         <template #default="scope">
           <span v-if="scope.row.role === 1">管理员</span>
-          <span v-if="scope.row.role === 2">设计</span>
-          <span v-if="scope.row.role === 3">其他</span>
+          <span v-if="scope.row.role === 2">设计主管</span>
+          <span v-if="scope.row.role === 3">设计人员</span>
+          <span v-if="scope.row.role === 4">其他</span>
         </template>
       </el-table-column>
       <el-table-column label="部门名称" prop="depart.name" />
