@@ -39,9 +39,8 @@
       <el-table-column  label="角色">
         <template #default="scope">
           <span v-if="scope.row.role === 1">管理员</span>
-          <span v-if="scope.row.role === 2">设计主管</span>
-          <span v-if="scope.row.role === 3">设计人员</span>
-          <span v-if="scope.row.role === 4">其他</span>
+          <span v-if="scope.row.role === 2">设计人员</span>
+          <span v-if="scope.row.role === 3">其他人员</span>
         </template>
       </el-table-column>
       <el-table-column label="部门名称" prop="depart.name" />

@@ -35,7 +35,10 @@ public class ExtractCallback implements IArchiveExtractCallback {
                 try {
                     if (!isFolder) {
 //                        System.out.println(path);
-                        File file = new File(ourDir+"\\" + path);
+                        File file = new File(ourDir + File.separator + path);
+                        System.out.println("ourDir" + ourDir);
+                        System.out.println("path" + path);
+                        System.out.println("ourDir+path:file" + file.getPath());
                         if (path.equals(oldPath[0])){
                             save2File(file, data,true);
                         }else{

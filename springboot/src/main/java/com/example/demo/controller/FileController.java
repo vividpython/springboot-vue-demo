@@ -401,23 +401,30 @@ public class FileController {
 
                 //存放rar文件的临时文件夹
                 String tempDirZip = System.getProperty("java.io.tmpdir");
+                System.out.println("tempDirZip" + tempDirZip);
                 String prefixZip = tempDirZip + File.separator + IdUtil.fastSimpleUUID();
+                System.out.println("prefixZip" + prefixZip);
                 File fileDirectoryConvertZip = new File(prefixZip);
 
                 if (!fileDirectoryConvertZip.exists()) {
                     fileDirectoryConvertZip.mkdirs();
+                    System.out.println("fileDirectoryConvertZip" + fileDirectoryConvertZip.getPath());
                 }
 
                 //用来存放解压之后的文件的路径
                 String tempDir = System.getProperty("java.io.tmpdir");
-                String prefix = tempDir + File.separator + IdUtil.fastSimpleUUID();
+                System.out.println("tempDir"   + tempDir);
+                String prefix = tempDir + File.separator+ IdUtil.fastSimpleUUID();
+                System.out.println("prefix" + prefix);
                 File fileDirectoryConvert = new File(prefix);
 
                 if (!fileDirectoryConvert.exists()) {
                     fileDirectoryConvert.mkdirs();
+                    System.out.println("fileDirectoryConvert" + fileDirectoryConvert.getPath());
                 }
 
                 File convertedFile = new File(prefixZip + File.separator + file.getOriginalFilename());
+                System.out.println("convertedFile" + convertedFile.getPath());
                 FileUtils.copyInputStreamToFile(file.getInputStream(), convertedFile);
                 IInArchive archive;
                 RandomAccessFile randomAccessFile;
@@ -430,6 +437,7 @@ public class FileController {
                 for (int i = 0; i < in.length; i++) {
                     in[i] = i;
                 }
+                System.out.println("in[int]" + Arrays.toString(in));
                 archive.extract(in, false, new ExtractCallback(archive,fileDirectoryConvert.getPath()));
                 archive.close();
                 randomAccessFile.close();
@@ -440,14 +448,19 @@ public class FileController {
                 // 获取解压后的文件名
                 File[] files = fileDirectoryConvert.listFiles();
                 String fileExt = "";
+                System.out.println("fileExt" + fileExt);
                 if (files != null) {
+                    System.out.println("压缩包不为空");
                     for (File extractedFile : files) {
-
+                        System.out.println("开始遍历");
                         if (extractedFile.isDirectory()) {
+                            System.out.println("内含文件夹？？");
                             continue;
                         } else {
+                            System.out.println("extractedFile" + extractedFile.getPath());
 
                             String fileName = extractedFile.getName();
+                            System.out.println("fileName" + fileName);
                             // 在这里处理每个文件的文件名，可以打印、保存到数据库等
                             System.out.println("Extracted file name: " + fileName);
 
@@ -548,10 +561,13 @@ public class FileController {
                     fileDirectoryConvert.delete();
                     return Result.success("0","全部上传",updateFilesName);
                 }
+                else {
+                    System.out.println("压缩包中无文件");
+                }
             }
         }else {
             // 处理其他类型的文件的逻辑
-            return Result.error("201","压缩包解析失败");
+            return Result.error("201","非ZIP和RAR格式");
         }
         return Result.error("201","压缩包解析失败");
     }

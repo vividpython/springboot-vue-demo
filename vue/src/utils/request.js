@@ -53,6 +53,7 @@ request.interceptors.response.use(
             }
             is401Handled = true; // 将标记设置为 true，表示已经处理过 401 错误
             const res = error.response.data;
+            console.log("reject.js进来了")
             if (res.code === '401') {
                 ElMessage({
                     message: res.msg,

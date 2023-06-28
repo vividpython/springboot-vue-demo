@@ -4,8 +4,8 @@
     <!--功能区域-->
     <div style="margin: 10px;padding: 0px">
       <el-button color="#3B455B" style="color: white" @click="add" v-if="user.role === 1">单选新增</el-button>
-      <el-button color="#3B455B" style="color: white" @click="add1" v-if="user.role !== 4">多选新增</el-button>
-      <el-button color="#3B455B" style="color: white" @click="updateM" v-if="user.role !== 4">设计变更</el-button>
+      <el-button color="#3B455B" style="color: white" @click="add1" v-if="user.role !== 3">多选新增</el-button>
+      <el-button color="#3B455B" style="color: white" @click="updateM" v-if="user.role !== 3">设计变更</el-button>
       <el-button color="#3B455B" style="color: white" @click="exportExcel">导出</el-button>
       <el-button color="#3B455B" style="color: white" @click="load">刷新</el-button>
     </div>
@@ -140,7 +140,7 @@
               >
               <el-popconfirm title="你确定要删除吗，删除之后数据将无法恢复?"
                              @confirm="handleDelete(scope.row.id,scope.row.documentPath,scope.row.createTime)"
-                             v-if="user.role !== 4">
+                             v-if="user.role !== 3">
                 <template #reference>
                   <el-button color="#f56c6c" style="color: white" size="small" >删除</el-button>
                 </template>
@@ -389,7 +389,7 @@
               <div class="col">
                 <el-popconfirm title="你确定要删除吗，删除之后数据将无法恢复?"
                                @confirm="handleDelete(scope.row.id,scope.row.documentPath)"
-                               v-if="user.role !== 4">
+                               v-if="user.role !== 3">
                   <template #reference>
                     <el-button type="danger" size="small" >删除</el-button>
                   </template>
