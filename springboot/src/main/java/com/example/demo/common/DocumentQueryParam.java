@@ -16,6 +16,17 @@ public class DocumentQueryParam {
     //文件类型
     private List<Integer> documentType;
 
+    public Integer getApprovalStatus() {
+        return approvalStatus;
+    }
+
+    public void setApprovalStatus(Integer approvalStatus) {
+        this.approvalStatus = approvalStatus;
+    }
+
+    //审核状态
+    private Integer approvalStatus;
+
 
     //创建时间结束时间
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss",timezone = "GMT+8")

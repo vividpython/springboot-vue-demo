@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demo.mapper.RoleMapper">
+    <resultMap type="com.example.demo.entity.Role" id="RoleResult">
+        <result property="id"    column="id"    />
+        <result property="name" column="name" />
+        <result property="roleKey" column="role_key" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="version" column="version" />
+        <result property="deleted" column="deleted" />
+    </resultMap>
+    <sql id="selectRoleVo">
+        select * from role r
+    </sql>
+    <select id="findRoleList" parameterType="com.example.demo.entity.Role" resultMap="RoleResult">
+        <include refid="selectRoleVo"/>
+        <where>
+            <if test="roleQueryParam != null">
+                <if test="roleQueryParam.name != null and roleQueryParam.name != ''">
+                    and name like CONCAT('%',#{roleQueryParam.name}, '%')
+                </if>
+            </if>
+            and deleted = 0
+        </where>
+    </select>
+
+    <select id="findByNameList" parameterType="java.lang.String" resultMap="RoleResult">
+        <include refid="selectRoleVo"/>
+        <where>
+            <if test="roleName != null">
+                and name like CONCAT('%',#{roleName}, '%')
+            </if>
+            and deleted = 0
+        </where>
+        order by id desc
+        limit 15
+    </select>
+
+</mapper>
+
+
+
+

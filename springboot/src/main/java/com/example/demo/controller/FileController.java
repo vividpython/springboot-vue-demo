@@ -64,7 +64,7 @@ public class FileController {
     DocumentService documentService;
 
 
-    @RequiresRoles(logical = Logical.OR, value = {"admin", "designer"})
+    //@RequiresRoles(logical = Logical.OR, value = {"superuser", "designer"})
     @PostMapping("/uploadUserIcons")
     public Result<?> uploadUserIcons(MultipartFile file) throws IOException {
         String originalFilename = file.getOriginalFilename();
@@ -79,7 +79,7 @@ public class FileController {
         return Result.success("http://" + ip + ":" + nginx_port + "/" + flag + "_" + originalFilename);
     }
     //富文本图片上传处理函数
-    @RequiresRoles(logical = Logical.OR, value = {"admin", "designer"})
+    //@RequiresRoles(logical = Logical.OR, value = {"superuser", "designer"})
     @PostMapping("/editorUpload")
     public JSON editorUpload(MultipartFile file) throws IOException {
         String originalFilename = file.getOriginalFilename();
@@ -104,7 +104,7 @@ public class FileController {
         //return Result.success("http://" + ip + ":" + nginx_port + "/" + flag + "_" + originalFilename);
     }
     //图纸文件版本更新
-    @RequiresRoles(logical = Logical.OR, value = {"admin", "designer"})
+    //@RequiresRoles(logical = Logical.OR, value = {"superuser", "designer"})
     @PostMapping("/updateDrawingFiles")
     public Result<?> updateDrawingFiles(@RequestParam("file") MultipartFile file,@RequestParam("drawing") String drawingStr) throws IOException {
         String originalFilename = file.getOriginalFilename();
@@ -168,7 +168,7 @@ public class FileController {
         //FileUtil.writeBytes(file.getBytes(), rootFilePath);
         //return Result.success(ip + "/"  + flag + "_" + originalFilename );
     }
-    @RequiresRoles(logical = Logical.OR, value = {"admin", "designer"})
+    //@RequiresRoles(logical = Logical.OR, value = {"superuser", "designer"})
     @PostMapping("/updateDocumentFiles")
     public Result<?> updateDocumentFiles(@RequestParam("file") MultipartFile file,@RequestParam("document") String documentStr) throws IOException {
         String originalFilename = file.getOriginalFilename();
@@ -218,7 +218,7 @@ public class FileController {
 
         return Result.success(resultMap);
     }
-    @RequiresRoles(logical = Logical.OR, value = {"admin", "designer"})
+    //@RequiresRoles(logical = Logical.OR, value = {"superuser", "designer"})
     @PostMapping("/updateDocumentFilesM")
     public Result<?> updateDocumentFilesM(@RequestParam("file") MultipartFile file,
                                           @RequestParam("document") String documentStr) throws IOException{
@@ -571,7 +571,7 @@ public class FileController {
         }
         return Result.error("201","压缩包解析失败");
     }
-    @RequiresRoles(logical = Logical.OR, value = {"admin", "designer"})
+    //@RequiresRoles(logical = Logical.OR, value = {"superuser", "designer"})
     @PostMapping("/uploadDrawingFiles")
     public Result<?> uploadDrawingFiles(@RequestParam("file") MultipartFile file,@RequestParam("drawing") String drawingStr) throws IOException {
         String originalFilename = file.getOriginalFilename();
@@ -626,7 +626,7 @@ public class FileController {
         //FileUtil.writeBytes(file.getBytes(), rootFilePath);
         //return Result.success(ip + "/"  + flag + "_" + originalFilename );
     }
-    @RequiresRoles(logical = Logical.OR, value = {"admin", "designer"})
+    //@RequiresRoles(logical = Logical.OR, value = {"superuser", "designer"})
     @PostMapping("/uploadDocumentFiles")
     public Result<?> uploadDocumentFiles(@RequestParam("file") MultipartFile file,@RequestParam("document") String documentStr) throws IOException {
         String originalFilename = file.getOriginalFilename();
@@ -685,7 +685,7 @@ public class FileController {
 
 
 
-    @RequiresRoles(logical = Logical.OR, value = {"admin", "designer"})
+    //@RequiresRoles(logical = Logical.OR, value = {"superuser", "designer"})
     @PostMapping("/delDrawingFile")
     public Result<?> delDrawingFile(@RequestBody String delDrawingPath){
 
@@ -705,7 +705,7 @@ public class FileController {
         }
     }
     //批量删除文件
-    @RequiresRoles(logical = Logical.OR, value = {"admin", "designer"})
+    //@RequiresRoles(logical = Logical.OR, value = {"superuser", "designer"})
     @Transactional(rollbackFor = Exception.class)
     @PostMapping("/delDrawingFiles")
     public Result<?> delDrawingFiles(@RequestBody List<Integer> ids){
@@ -729,7 +729,7 @@ public class FileController {
         }
     }
 
-    @RequiresRoles(logical = Logical.OR, value = {"admin", "designer"})
+    //@RequiresRoles(logical = Logical.OR, value = {"superuser", "designer"})
     @PostMapping("/delDocumentFile")
     public Result<?> delDocumentFile(@RequestBody String delDocumentPath){
         String delDocumentPath1 = delDocumentPath.replace("{\"delDocumentPath\":\"","").replace("\"}","");
@@ -748,7 +748,7 @@ public class FileController {
         }
     }
     //批量删除文件
-    @RequiresRoles(logical = Logical.OR, value = {"admin", "designer"})
+    //@RequiresRoles(logical = Logical.OR, value = {"superuser", "designer"})
     @Transactional(rollbackFor = Exception.class)
     @PostMapping("/delDocumentFiles")
     public Result<?> delDocumentFiles(@RequestBody List<String> filePaths){

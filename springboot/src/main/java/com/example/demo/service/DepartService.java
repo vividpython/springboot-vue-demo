@@ -24,6 +24,14 @@ public interface DepartService extends IService<Depart> {
     Result<?> modifyDepart(Depart depart);
 
     Result<?> deleteDepart(Integer id);
+    /**
+     * @description:
+     * @param id: 根绝部门id查询部门信息
+     * @return com.example.demo.entity.Depart
+     * @author: Zheng
+     * @date: 2023/7/11 15:42
+     */
 
+    Depart getDepartById(Integer id);
     Result<?> findByNameList(String departName);
 }

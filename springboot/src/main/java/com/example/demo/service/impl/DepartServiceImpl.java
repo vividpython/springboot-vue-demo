@@ -75,6 +75,12 @@ public class DepartServiceImpl extends ServiceImpl<DepartMapper, Depart> impleme
     }
 
     @Override
+    public Depart getDepartById(Integer id) {
+        if (id == null || id <= 0) return null;
+        return this.baseMapper.selectById(id);
+    }
+
+    @Override
     public Result<?> findByNameList(String departName) {
         if (departName == null ) return Result.error("201","参数错误");
         return  Result.success(this.baseMapper.findByNameList(departName)) ;

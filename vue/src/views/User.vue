@@ -36,13 +36,14 @@
       <el-table-column prop="id" label="ID" sortable/>
       <el-table-column prop="username" label="用户名"/>
       <el-table-column prop="nickName" label="昵称"/>
-      <el-table-column  label="角色">
-        <template #default="scope">
-          <span v-if="scope.row.role === 1">管理员</span>
-          <span v-if="scope.row.role === 2">设计人员</span>
-          <span v-if="scope.row.role === 3">其他人员</span>
-        </template>
-      </el-table-column>
+      <!--<el-table-column  label="角色">-->
+      <!--  <template #default="scope">-->
+      <!--    <span v-if="scope.row.roleId === 1">管理员</span>-->
+      <!--    <span v-if="scope.row.roleId === 2">设计人员</span>-->
+      <!--    <span v-if="scope.row.roleId === 3">其他人员</span>-->
+      <!--  </template>-->
+      <!--</el-table-column>-->
+      <el-table-column label="用户角色" prop="role.name" />
       <el-table-column label="部门名称" prop="depart.name" />
       <el-table-column prop="permission" label="权限"/>
       <el-table-column  label="头像">
@@ -55,17 +56,26 @@
           />
         </template>
       </el-table-column>
-      <el-table-column fixed="right" label="操作" width="170">
+      <el-table-column fixed="right" label="操作" width="190">
         <template #default="scope">
-          <el-button size="small" @click="handleEdit(scope.row)"
-          >编辑
-          </el-button
-          >
-          <el-popconfirm title="Are you sure to delete this?" @confirm="handleDelete(scope.row.id)">
-            <template #reference>
-              <el-button type="danger" size="small">删除</el-button>
-            </template>
-          </el-popconfirm>
+          <div class="btn-group">
+            <div class="col">
+              <el-button size="small" @click="handleEdit(scope.row)"
+              >编辑
+              </el-button
+              >
+              <el-popconfirm title="你确定要删除用户吗?" @confirm="handleDelete(scope.row.id)">
+                <template #reference>
+                  <el-button type="danger" size="small">删除</el-button>
+                </template>
+              </el-popconfirm>
+              <el-popconfirm title="重置密码后，账号原密码将会失效，确定重置?" @confirm="handleResetPassword(scope.row.id)">
+                <template #reference>
+                  <el-button type="warning" size="small">重置</el-button>
+                </template>
+              </el-popconfirm>
+            </div>
+          </div>
         </template>
       </el-table-column>
     </el-table>
@@ -90,8 +100,16 @@
         <el-form-item label="昵称">
           <el-input v-model="form.nickName" style="width: 80%"/>
         </el-form-item>
-        <el-form-item label="角色">
-          <el-input v-model="form.role" style="width: 80%"/>
+        <el-form-item label="角色类型" prop="RoleId">
+          <el-autocomplete
+              v-model="roleInputValue"
+              :fetch-suggestions="queryRoleSearchAsync"
+              :popper-append-to-body="true"
+              :placeholder="'请输入内容'"
+              :trigger-on-focus="true"
+              :value-key="'label'"
+              @select="handleRoleSelect"
+          ></el-autocomplete>
         </el-form-item>
         <el-form-item label="权限">
           <el-input v-model="form.permission" style="width: 80%"/>
@@ -146,11 +164,13 @@ export default {
   data() {
     return {
       form: {
-        departId: '' // 初始值为空字符串
+        departId: '', // 初始值为空字符串
+        roleId: '' // 初始值为空字符串
       },
       loading: false,
       formInline: {},
       departList:[],
+      roleList:[],
       search: '',
       currentPage: 1,
       pageSize: 10,
@@ -165,6 +185,7 @@ export default {
       tableData: [],
       filesUploadUrl:"http://" + window.server.filesUploadUrl + ":9090/files/uploadUserIcons",
       departInputValue: '',
+      roleInputValue: '',
       options: []
     }
   },
@@ -172,6 +193,7 @@ export default {
     console.log(this.headers);
     this.load();
     this.getDepartList();
+    this.getRoleList();
   },
   methods: {
 
@@ -179,6 +201,12 @@ export default {
       console.log("item.value"+item.value)  // 获取选中项的 value 值
       this.form.departId = item.value  // 将选中项的 value 赋值给其它变量
     },
+
+    handleRoleSelect(item){
+      console.log("item.value"+item.value)  // 获取选中项的 value 值
+      this.form.roleId = item.value  // 将选中项的 value 赋值给其它变量
+    },
+
     async queryDepartSearchAsync(queryString, cb) {
       try {
         console.log("this.departInputValue:" + this.departInputValue)
@@ -196,7 +224,23 @@ export default {
         cb([])
       }
     },
+    async queryRoleSearchAsync(queryString, cb) {
+      try {
+        console.log("this.roleInputValue:" + this.roleInputValue)
+        request.post("/role/findListByName",JSON.stringify(this.roleInputValue)
+        ).then(res => {
+          console.log(res);
+          // 将查询结果作为选项返回给组件
+          this.options = res.data.map(item => ({ value: item.id, label: item.name }))
+          console.log("this.options:" + JSON.stringify(this.options) )
+          cb(this.options)
+        })
 
+      } catch (error) {
+        console.error(error)
+        cb([])
+      }
+    },
     filesUploadSuccess(res){
       this.form.img = res.data;
     },
@@ -219,7 +263,22 @@ export default {
       }
 
     },
+    async getRoleList() {
+      try {
 
+        //延迟执行
+        await this.delay(1000);
+        //此处设置先按10个查
+        request.post(`/role/1/10`
+        ).then(res => {
+          console.log(res);
+          this.roleList = res.data.records;
+        })
+      }catch (error){
+        console.error(error)
+      }
+
+    },
     async load() {
       try {
         this.loading = true; // 显示Loading遮罩
@@ -339,7 +398,25 @@ export default {
         }
         this.load();
       });
-    }
+    },
+    handleResetPassword(id) {
+      console.log(id)
+      request.get("/user/resetPassword/" + id).then(res => {
+        console.log(res);
+        if (res.code === '0') {
+          ElMessage({
+            message: '删除成功',
+            type: 'success',
+          })
+        } else {
+          ElMessage({
+            message: '删除失败',
+            type: 'error',
+          })
+        }
+        this.load();
+      });
+    },
   }
 }
 </script>

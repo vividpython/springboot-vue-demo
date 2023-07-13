@@ -1,7 +1,12 @@
 package com.example.demo.shiro;
 
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.example.demo.common.Result;
+import com.example.demo.entity.Docperms;
+import com.example.demo.entity.Document;
+import com.example.demo.entity.Role;
 import com.example.demo.entity.User;
+import com.example.demo.service.DocpermsService;
 import com.example.demo.util.JwtUtils;
 import com.example.demo.service.UserService;
 import org.apache.shiro.authc.AuthenticationException;
@@ -15,6 +20,8 @@ import org.apache.shiro.subject.PrincipalCollection;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 /**
  * @program: smalabel-backend
  * @description:
@@ -26,6 +33,9 @@ public class MyRealm extends AuthorizingRealm {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private DocpermsService docpermsService;
 
     //    //根据token判断此Authenticator是否使用该realm
     //    //必须重写不然shiro会报错
@@ -59,23 +69,24 @@ public class MyRealm extends AuthorizingRealm {
         ////查询数据库来获取用户的权限
         //info.addStringPermission(user.getPermission());
         User user = userService.getUserByUsername(username);
-        // 查询数据库来获取用户的角色
-        String roleName = null;
-        if (user.getRole() == 1) {
-            roleName = "admin";
-        } else if (user.getRole() == 2) {
-            roleName = "designer";
-        } else if (user.getRole() == 3) {
-            roleName = "worker";
-        }
-        if (roleName != null) {
-            info.addRole(roleName);
-        }
 
-        // 查询数据库来获取用户的权限
-        String permissionName = user.getPermission();
-        if (permissionName != null && !permissionName.isEmpty()) {
-            info.addStringPermission(permissionName);
+        // 查询数据库来获取用户的角色
+        String roleKey = user.getRole().getRoleKey();
+
+        if (roleKey != null) {
+            info.addRole(roleKey);
+        }
+        Result<?> permissionsByRoleId = docpermsService.getPermissionsByRoleId(user.getRoleId());
+        Object data = permissionsByRoleId.getData();
+        if (data instanceof List) {
+            List<Docperms> docpermsList = (List<Docperms>) data;
+            if (docpermsList != null && docpermsList.size() > 0){
+                for (Docperms docperms : docpermsList) {
+                    String permission = docperms.getPerms();
+                    // 对 roleKey 进行相应的处理
+                    info.addStringPermission(permission);
+                    }
+            }
         }
         System.out.println("方法结束咯-------》》》");
 

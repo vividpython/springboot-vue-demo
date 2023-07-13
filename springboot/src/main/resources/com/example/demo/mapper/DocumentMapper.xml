@@ -11,10 +11,14 @@
         <result property="documentName"    column="document_name"    />
         <result property="documentType"    column="document_type"    />
         <result property="sequenceNo"    column="sequence_no"    />
+        <result property="approvalStatus"    column="approval_status"    />
+        <result property="publishStatus"    column="publish_status"    />
         <result property="documentVersion"    column="document_version"    />
         <result property="documentPath"    column="document_path"    />
         <result property="createTime"    column="create_time"    />
         <result property="updateTime"    column="update_time"    />
+        <result property="approvalTime"    column="approval_time"    />
+        <result property="publishTime"    column="publish_time"    />
         <result property="userId"    column="user_id"    />
         <result property="subId"    column="sub_id"    />
         <result property="deleted"    column="deleted"    />
@@ -52,7 +56,10 @@
                 and d1.item_no like CONCAT('%',#{documentQueryParam.itemNo}, '%')
             </if>
             <if test="documentQueryParam.materialNo != null and documentQueryParam.materialNo != ''">
-                and d1.material_no like CONCAT('%',#{documentQueryParam.material_no}, '%')
+                and d1.material_no like CONCAT('%',#{documentQueryParam.materialNo}, '%')
+            </if>
+            <if test="documentQueryParam.approvalStatus != null and documentQueryParam.approvalStatus != ''">
+                and d1.approval_status like CONCAT('%',#{documentQueryParam.approvalStatus}, '%')
             </if>
             <if test="documentQueryParam.userId != null and documentQueryParam.userId != ''">
                 and u.id like CONCAT('%',#{documentQueryParam.userId}, '%')

@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.demo.common.UserQueryParam;
 import com.example.demo.entity.Depart;
+import com.example.demo.entity.Role;
 import com.example.demo.entity.User;
 import org.springframework.stereotype.Repository;
 
@@ -28,4 +29,5 @@ public interface UserMapper extends BaseMapper<User> {
     User selectByIdNow(Integer id);
 
     List<Depart> findListByName(String userName);
+
 }

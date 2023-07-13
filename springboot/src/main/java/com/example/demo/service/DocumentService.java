@@ -69,6 +69,9 @@ public interface DocumentService extends IService<Document> {
     Result<?> getDocumentById(Integer id);
 
 
+    Result<?> verifyPass( Document document);
+
+    Integer verifyPassById(Integer id);
 
     Integer departConfirm( Document document);
 

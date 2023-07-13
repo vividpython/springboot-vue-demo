@@ -17,7 +17,7 @@ public class User {
 
     private String img;
 
-    private Integer role;
+    private Integer roleId;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss",timezone = "GMT+8")
     @TableField(fill = FieldFill.INSERT)
@@ -37,4 +37,7 @@ public class User {
 
     @TableField(exist = false)  // 此字段不更新
     private Depart depart;    // 员工部门
+
+    @TableField(exist = false)  // 此字段不更新
+    private Role role;    // 员工部门
 }

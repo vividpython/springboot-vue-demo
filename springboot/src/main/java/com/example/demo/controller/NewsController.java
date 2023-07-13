@@ -13,7 +13,7 @@ import javax.annotation.Resource;
 
 @RestController
 @RequestMapping("/news")
-@RequiresRoles(logical = Logical.OR, value = {"admin", "designer"})
+//@RequiresRoles(logical = Logical.OR, value = {"superuser", "designer"})
 public class NewsController {
     @Resource
     NewsService newsService;

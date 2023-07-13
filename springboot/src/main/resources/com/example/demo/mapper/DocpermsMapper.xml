@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demo.mapper.DocpermsMapper">
+    <resultMap type="com.example.demo.entity.Docperms" id="DocpermsResult">
+        <result property="id"    column="id"    />
+        <result property="name" column="name" />
+        <result property="perms" column="perms" />
+        <result property="type" column="type" />
+        <result property="parentId" column="parent_id" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="version" column="version" />
+        <result property="deleted" column="deleted" />
+        <collection property="subPermissions" ofType="com.example.demo.entity.Docperms" select="selectAllTree" column="{parent_id = id}"/>
+    </resultMap>
+
+
+
+    <select id="selectAllTree" resultMap="DocpermsResult">
+        select
+        id, name, perms, type, parent_id, create_time, update_time,version,deleted
+        from docperms
+        <where>
+            <choose>
+                <when test="parent_id != null">
+                    and parent_id = #{parent_id}
+                </when>
+                <otherwise>
+                    and parent_id = 0
+                </otherwise>
+            </choose>
+        </where>
+    </select>
+    <sql id="selectDocpermsVo">
+        SELECT d.* FROM docperms d
+    </sql>
+    <select id="findDocpermsList" parameterType="com.example.demo.entity.Docperms" resultMap="DocpermsResult">
+        <include refid="selectDocpermsVo"/>
+        <where>
+            <if test="docpermsQueryParam != null">
+                <if test="docpermsQueryParam.name != null and docpermsQueryParam.name != ''">
+                    and name like CONCAT('%',#{docpermsQueryParam.name}, '%')
+                </if>
+            </if>
+            and deleted = 0
+        </where>
+    </select>
+
+    <select id="findByNameList" parameterType="java.lang.String" resultMap="DocpermsResult">
+        <include refid="selectDocpermsVo"/>
+        <where>
+            <if test="docpermsName != null">
+                and name like CONCAT('%',#{docpermsName}, '%')
+            </if>
+            and deleted = 0
+        </where>
+        order by id desc
+        limit 15
+    </select>
+
+    <select id="findAllDocperms"  resultMap="DocpermsResult">
+        <include refid="selectDocpermsVo"/>
+        where parent_id = 0
+        AND EXISTS (
+        SELECT 1
+        FROM docperms s
+        WHERE s.parent_id = d.id
+        )
+    </select>
+
+    <insert id="setDocPermsByRoleId">
+        delete from role_permission where role_id = #{roleId};
+        <if test="permissionList != null and permissionList.size() > 0">
+            insert into role_permission(role_id,permission_id) values
+            <foreach collection="permissionList" item="emp" separator=",">
+                (#{roleId},#{emp})
+            </foreach>
+        </if>
+    </insert>
+
+    <select id="getPermissionsByRoleId" parameterType="java.lang.Integer" resultMap="DocpermsResult">
+        SELECT d.*
+        FROM role_permission rp
+                 JOIN docperms d ON rp.permission_id = d.id
+        WHERE rp.role_id = #{id};
+    </select>
+
+</mapper>
+
+
+
+

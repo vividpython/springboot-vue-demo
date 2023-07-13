@@ -230,6 +230,10 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
             String documentPath = document.getDocumentPath();
             this.renameFile(documentName,documentPath,documentVersion);
             document.setDocumentPath(renameDocumentPath(documentName,documentPath,documentVersion));
+
+            //多选新增或者变更通知单插入的时候 审核状态设置为未校核
+            document.setApprovalStatus(0);
+
             // 执行插入数据操作
             return this.baseMapper.insert(document) == 0 ? Result.error("201","添加记录失败") : Result.success();
         }
@@ -330,6 +334,8 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
             wrapper.eq("item_no", itemNo);
             wrapper.eq("document_type", documentType);
             wrapper.eq("sequence_no", sequenceNo);
+            wrapper.eq("approval_status", 1); // 添加approval_status字段条件 判断A01版本的文件是否已经通过审核
+            wrapper.eq("deleted", 0); // 添加deleted字段条件
             wrapper.orderByDesc("create_time");
             wrapper.last("limit 1");
         }else {
@@ -338,10 +344,12 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
             wrapper.eq("material_no", materialNo);
             wrapper.eq("document_type", documentType);
             wrapper.eq("sequence_no", sequenceNo);
+            wrapper.eq("approval_status", 1); // 添加approval_status字段条件 判断A01版本的文件是否已经通过审核
+            wrapper.eq("deleted", 0); // 添加deleted字段条件
             wrapper.orderByDesc("create_time");
             wrapper.last("limit 1");
         }
-        // 查询判断, 如果查询出来有数据, 则不为null
+        // 查询判断, 如果查询出来有数据, 则不为null 判断系统是不是有AO1版本
         if (this.baseMapper.selectOne(wrapper) != null)
         {
             //
@@ -379,13 +387,42 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
 
             //设置文件名
             document.setDocumentName(documentName);
-
+            //设置审批状态为 未校核
+            document.setApprovalStatus(0);
 
             this.renameFile(documentName,documentPath,documentVersion);
             //设置文件路径名
             document.setDocumentPath(renameDocumentPath(documentName,documentPath,documentVersion));
             // 执行插入数据操作
-            return this.baseMapper.insert(document) == 0 ? Result.error("201","更新文件失败") : Result.success();
+            //这里需要处理一下 如果用户上传了A01文件 审核通过了 然后又上传了A02 如果A02没有被审核 这时候对A02进行更新的话 上面查到的还是A01 这样就会导致出现两个A02
+
+            QueryWrapper<Document> wrapper1 = new QueryWrapper<>();
+
+            if (document.getMaterialNo() == null || document.getMaterialNo().equals("")){
+                wrapper1.select("id");
+                wrapper1.eq("item_no", document.getItemNo());
+                wrapper1.eq("document_type",document.getDocumentType());
+                wrapper1.eq("sequence_no", document.getSequenceNo());
+                wrapper1.eq("document_version", document.getDocumentVersion());
+                wrapper1.orderByDesc("create_time");
+                wrapper1.last("limit 1");
+            }else {
+                wrapper1.select("id");
+                wrapper1.eq("item_no", document.getItemNo());
+                wrapper1.eq("material_no", document.getMaterialNo());
+                wrapper1.eq("document_type",document.getDocumentType());
+                wrapper1.eq("sequence_no", document.getSequenceNo());
+                wrapper1.eq("document_version", document.getDocumentVersion());
+                wrapper1.orderByDesc("create_time");
+                wrapper1.last("limit 1");
+            }
+            if (this.baseMapper.selectOne(wrapper1) != null){
+                //如果能查出来 说明出现上述的问题了
+                return Result.error("201","更新失败");
+            }else{
+                return this.baseMapper.insert(document) == 0 ? Result.error("201","更新文件失败") : Result.success();
+            }
+
 
         }
         else {
@@ -476,6 +513,25 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
             return Result.error("202","参数错误");
 
         return Result.success(this.baseMapper.selectById(id));
+    }
+
+    @Override
+    public Result<?> verifyPass(Document document) {
+        if (document == null || document.getId() == null || document.getId() <= 0)  return Result.error("202","参数错误");
+        return Result.success(this.baseMapper.updateById(document));
+    }
+
+    @Override
+    public Integer verifyPassById(Integer id) {
+        Result<?> documentById = getDocumentById(id);
+        Object data = documentById.getData();
+        if (data instanceof Document) {
+            Document document = (Document) data;
+            document.setApprovalStatus(1);
+            return this.baseMapper.updateById(document);
+        }else{
+            return 0;
+        }
     }
 
     @Override

@@ -21,7 +21,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/drawing")
-@RequiresRoles("admin")
+//@RequiresRoles("superuser")
 public class DrawingController {
 
     private final static Logger logger = LoggerFactory.getLogger(DrawingController.class);

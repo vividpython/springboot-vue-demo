@@ -19,7 +19,12 @@ public class Document {
     private String documentName;
     private Integer documentType;
     private Integer sequenceNo;
+    //审批状态 0表示未审批 1表示审批通过
+    private Integer approvalStatus;  // 审批状态
 
+
+    //发布状态 0表示未发布 1表示已发布
+    private Integer publishStatus;  // 发布状态
 
     private String documentVersion;
     private String documentPath;
@@ -27,6 +32,12 @@ public class Document {
     private Date createTime;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss",timezone = "GMT+8")
     private Date updateTime;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss",timezone = "GMT+8")
+    private Date approvalTime;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss",timezone = "GMT+8")
+    private Date publishTime;
 
     //创建人id
     private Integer userId;

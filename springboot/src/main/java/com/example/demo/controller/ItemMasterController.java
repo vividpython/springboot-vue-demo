@@ -26,7 +26,7 @@ public class ItemMasterController {
 
 
     // 查询图纸信息列表
-    @RequiresRoles(logical = Logical.OR, value = {"admin", "designer"})
+    //@RequiresRoles(logical = Logical.OR, value = {"superuser", "designer"})
     @PostMapping("{index}/{size}")
     public Result<?> findItemMasterList(@PathVariable(value = "index") Integer index,
                           @PathVariable(value = "size") Integer size,

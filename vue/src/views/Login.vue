@@ -189,6 +189,7 @@ export default {
             })
             this.inputCode = ''
             this.createCode()
+            this.loading = false; // 隐藏Loading遮罩
             return
           }
           //提交操作

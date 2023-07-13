@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.demo.common.Result;
 import com.example.demo.common.UserQueryParam;
+import com.example.demo.entity.Role;
 import com.example.demo.entity.User;
 import com.example.demo.mapper.UserMapper;
 import com.example.demo.service.UserService;
@@ -152,5 +153,24 @@ public class UserServiceImpl extends ServiceImpl<UserMapper,User> implements Use
         if (userName == null ) return Result.error("201","参数错误");
         return  Result.success(this.baseMapper.findListByName(userName)) ;
     }
+
+    @Override
+    public Result<?> resetPassword(Integer id) {
+        User userInfolog = this.getUserInfolog(id);
+        // 生成随机盐值
+        String salt = BCrypt.gensalt();
+        if (userInfolog == null ) return Result.error("201","参数错误");
+
+
+        String username = userInfolog.getUsername();
+        String NewPassword = "Aa" + username + "123!";
+        // 使用BCrypt哈希算法进行密码加密
+        String hashedPassword = BCrypt.hashpw(NewPassword, salt);
+        userInfolog.setPassword(hashedPassword);
+        //更新查到的用户的密码为默认密码
+        return  Result.success(this.baseMapper.updateById(userInfolog));
+
+    }
+
 
 }

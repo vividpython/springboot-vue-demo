@@ -3,9 +3,9 @@
 
     <!--功能区域-->
     <div style="margin: 10px;padding: 0px">
-      <el-button color="#3B455B" style="color: white" @click="add" v-if="user.role === 1">单选新增</el-button>
-      <el-button color="#3B455B" style="color: white" @click="add1" v-if="user.role !== 3">多选新增</el-button>
-      <el-button color="#3B455B" style="color: white" @click="updateM" v-if="user.role !== 3">设计变更</el-button>
+      <el-button color="#3B455B" style="color: white" @click="add" v-if="user.role.roleKey === 'superuser'">单选新增</el-button>
+      <el-button color="#3B455B" style="color: white" @click="add1" v-if="user.role.roleKey === 'superuser' || user.role.roleKey === 'department_admin' || user.role.roleKey === 'designer'">多选新增</el-button>
+      <el-button color="#3B455B" style="color: white" @click="updateM" v-if="user.role.roleKey === 'superuser' || user.role.roleKey === 'department_admin' || user.role.roleKey === 'designer'">设计变更</el-button>
       <el-button color="#3B455B" style="color: white" @click="exportExcel">导出</el-button>
       <el-button color="#3B455B" style="color: white" @click="load">刷新</el-button>
     </div>
@@ -63,10 +63,14 @@
     </div>
     <!--批量操作按钮区域-->
     <div style="margin: 10px ; padding: 0px">
-      <el-button type="primary" @click="handleDownLoadDrawings">批量下载</el-button>
+      <el-button type="primary" @click="handleDownLoadDocuments">批量下载</el-button>
+      <el-button  color="#626aef"
+                  @click="handleVerifyDocuments"
+                 v-if="user.role.roleKey === 'superuser' || user.role.roleKey === 'department_admin'"
+      >批量校核</el-button>
       <el-popconfirm title="你确定要删除吗，删除之后数据将无法恢复?"
-                     @confirm="handleDeleteDrawings"
-                     v-if="user.role === 1">
+                     @confirm="handleDeleteDocuments"
+                     v-if="user.role.roleKey === 'superuser'">
         <template #reference>
           <el-button type="danger" >批量删除</el-button>
         </template>
@@ -118,11 +122,33 @@
               inactive-text="作废"
               :before-change="beforeChangeStatus.bind(this, scope.row)"
               style="--el-switch-on-color: #409EFF; --el-switch-off-color: #ff4949"
-              @change="obsoleteChange(scope.row)">
-          </el-switch>
+              v-if="user.role.roleKey === 'regular_user'"
+              disabled
+          ></el-switch>
+          <el-switch
+              v-else
+              v-model="scope.row.deleted"
+              :active-value="0"
+              :inactive-value="1"
+              size="large"
+              class="ml-2"
+              inline-prompt
+              active-text="启用"
+              inactive-text="作废"
+              :before-change="beforeChangeStatus.bind(this, scope.row)"
+              style="--el-switch-on-color: #409EFF; --el-switch-off-color: #ff4949"
+          ></el-switch>
         </template>
       </el-table-column>
-
+      <el-table-column label="审批状态">
+        <template #default="scope">
+          <el-button :type="scope.row.approvalStatus === 1 ? 'success' : 'danger'"
+                     :disabled="true"
+                     class="custom-button">
+            {{ scope.row.approvalStatus === 1 ? '已校核' : '未校核' }}
+          </el-button>
+        </template>
+      </el-table-column>
       <el-table-column prop="createTime" label="创建时间" sortable show-overflow-tooltip/>
       <el-table-column prop="updateTime" label="更新时间" sortable  show-overflow-tooltip/>
       <el-table-column fixed="right" label="操作" width="220">
@@ -134,13 +160,13 @@
               </el-button
               >
               <!--//单个文件更新功能现只对管理员开放-->
-              <el-button size="small" style="color: white" v-if="user.role === 1" @click="updateVersion(scope.row)"
+              <el-button size="small" color="#3BA6C4"  v-if="user.role.roleKey === 'superuser'" @click="updateVersion(scope.row)"
               >更新
               </el-button
               >
               <el-popconfirm title="你确定要删除吗，删除之后数据将无法恢复?"
                              @confirm="handleDelete(scope.row.id,scope.row.documentPath,scope.row.createTime)"
-                             v-if="user.role !== 3">
+                             v-if="user.role.roleKey === 'superuser' || user.role.roleKey === 'department_admin' || user.role.roleKey === 'designer'">
                 <template #reference>
                   <el-button color="#f56c6c" style="color: white" size="small" >删除</el-button>
                 </template>
@@ -149,6 +175,13 @@
             <div class="col">
               <el-button size="small" color="#409EFF" style="color: white" @click="downloadFile(scope.row)">下载</el-button>
               <el-button size="small" color="#909399" style="color: white" @click="showHistory(scope.row)">历史</el-button>
+              <el-popconfirm title="对文件校核后将自动通过，确定校核?"
+                             @confirm="handVerify(scope.row)"
+                             v-if="user.role.roleKey === 'superuser' || user.role.roleKey === 'department_admin'">
+                <template #reference>
+                  <el-button color="#3773EA" style="color: white" size="small" >校核</el-button>
+                </template>
+              </el-popconfirm>
             </div>
           </div>
         </template>
@@ -389,7 +422,7 @@
               <div class="col">
                 <el-popconfirm title="你确定要删除吗，删除之后数据将无法恢复?"
                                @confirm="handleDelete(scope.row.id,scope.row.documentPath)"
-                               v-if="user.role !== 3">
+                               v-if="user.role.roleKey === 'superuser' || user.role.roleKey === 'department_admin' || user.role.roleKey === 'designer'">
                   <template #reference>
                     <el-button type="danger" size="small" >删除</el-button>
                   </template>
@@ -553,7 +586,9 @@ export default {
 
       //鉴权用的用户信息
       userId:0,
-      user:{},
+      user:{
+        role:{},
+      },
 
 
 
@@ -654,7 +689,7 @@ export default {
       }
     },
 
-    async handleDownLoadDrawings() {
+    async handleDownLoadDocuments() {
       if (!this.ids.length) {
         ElMessage({
           message: '请选择数据',
@@ -693,7 +728,7 @@ export default {
       link.click()
     },
     //批量删除方法
-    handleDeleteDrawings() {
+    handleDeleteDocuments() {
       if (!this.ids.length) {
         ElMessage({
           message: '请选择数据',
@@ -733,7 +768,33 @@ export default {
           }
       )
     },
-
+    handleVerifyDocuments() {
+      if (!this.ids.length) {
+        ElMessage({
+          message: '请选择数据',
+          type: 'warning',
+        })
+        return
+      }
+      request.post("/document/verifyBatch", this.ids).then(res => {
+            console.log(res);
+            if (res.code === '0') {
+              ElMessage({
+                message: res.msg,
+                type: '全部校核成功',
+              })
+              this.load();
+            }else {
+              ElMessage({
+                message: res.msg,
+                type: 'warning',
+                //
+              })
+              this.load()
+            }
+          }
+      )
+    },
     //多选栏选择变化
     handleSelectionChange(val) {
       this.ids = val.map(v => v.id)
@@ -1120,6 +1181,9 @@ export default {
               console.log("this.form.documentType:" + this.form.documentType)
               //新增的时候创建人的id就是当前用户的id
               this.form.userId =  this.userId;
+
+
+
               const fieldNames = {
                 itemNo: '产品编号',
                 documentType: '图纸类型',
@@ -1802,7 +1866,30 @@ export default {
         }
         this.load();
       });
-    }
+    },
+
+    handVerify(row) {
+      this.form = JSON.parse(JSON.stringify(row));
+      this.form.approvalStatus = 1;
+      console.log("edit.row:", this.form)
+      // this.oldFilePath =  this.form.drawingPath;
+      request.post(`/document/verifyPass`,this.form).then(res => {
+        console.log(res);
+        if (res.code === '0') {
+          ElMessage({
+            message: '审批成功',
+            type: 'success',
+          })
+        } else {
+          ElMessage({
+            message: res.msg,
+            type: 'error',
+          })
+        }
+        this.load();
+      });
+    },
+
   }
 }
 </script>
@@ -1829,5 +1916,10 @@ export default {
 
 .radio-group-container {
   display: flex;
+}
+
+.custom-button {
+  background-color: rgba(0, 0, 0, 0.8); /* 设置按钮背景颜色为深一些的黑色 */
+  color: #fff; /* 设置文字颜色为白色 */
 }
 </style>
