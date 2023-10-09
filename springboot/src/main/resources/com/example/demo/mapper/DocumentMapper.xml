@@ -19,12 +19,15 @@
         <result property="updateTime"    column="update_time"    />
         <result property="approvalTime"    column="approval_time"    />
         <result property="publishTime"    column="publish_time"    />
+        <result property="comment"    column="comment"    />
         <result property="userId"    column="user_id"    />
         <result property="subId"    column="sub_id"    />
+        <result property="departId"    column="depart_id"    />
         <result property="deleted"    column="deleted"    />
         <association property="user"  column="user_id" select="getUserById"></association>
         <association property="substitution"  column="sub_id" select="getUserById"></association>
     </resultMap>
+
     <select id="getUserById" parameterType="int" resultMap="com.example.demo.mapper.UserMapper.UserResult">
         select * from user where id=#{id}
     </select>
@@ -38,11 +41,32 @@
 
     <select id="findDocumentList" parameterType="com.example.demo.entity.Document" resultMap="DocumentResult">
         <include refid="selectDocumentVo"/>
-        where d1.id in (
-        select max(d2.id)
-        from document d2
-        group by d2.item_no, d2.material_no, d2.document_type, d2.sequence_no
-        )
+        where
+        <if test="documentQueryParam != null">
+                <!-- 过滤条件一 -->
+                <choose>
+                    <when test="documentQueryParam.approvalStatus == 1 and documentQueryParam.publishStatus == 1">
+                        d1.approval_status = #{documentQueryParam.approvalStatus}
+                        AND d1.publish_status = #{documentQueryParam.publishStatus}
+                        AND d1.id IN (SELECT
+                        max(d3.id) FROM
+                        (
+                        SELECT d5.id, d5.item_no, d5.material_no, d5.document_type, d5.sequence_no FROM document d5
+                        INNER JOIN user u3 ON d5.user_id = u3.id LEFT JOIN user u4 ON d5.sub_id = u4.id
+                        WHERE d5.approval_status = 1 AND d5.publish_status = 1
+                        ) d3
+                        GROUP BY d3.item_no, d3.material_no, d3.document_type, d3.sequence_no
+                        )
+                    </when>
+                    <otherwise>
+                        d1.id in (
+                        select max(d2.id)
+                        from document d2
+                        group by d2.item_no, d2.material_no, d2.document_type, d2.sequence_no
+                        )
+                    </otherwise>
+                </choose>
+        </if>
         <if test="documentQueryParam != null">
             <!-- 创建时间起始查询时间不为空时，添加起始时间条件 -->
             <if test="documentQueryParam.createTimeStart != null">
@@ -52,23 +76,62 @@
             <if test="documentQueryParam.createTimeEnd != null">
                 and d1.create_time &lt;= #{documentQueryParam.createTimeEnd}
             </if>
+            <!-- 发布时间起始查询时间不为空时，添加起始时间条件 -->
+            <if test="documentQueryParam.publishTimeStart != null">
+                and d1.publish_time &gt;= #{documentQueryParam.publishTimeStart}
+            </if>
+            <!-- 发布时间结束查询时间不为空时，添加结束时间条件 -->
+            <if test="documentQueryParam.publishTimeEnd != null">
+                and d1.publish_time &lt;= #{documentQueryParam.publishTimeEnd}
+            </if>
             <if test="documentQueryParam.itemNo != null and documentQueryParam.itemNo != ''">
                 and d1.item_no like CONCAT('%',#{documentQueryParam.itemNo}, '%')
             </if>
             <if test="documentQueryParam.materialNo != null and documentQueryParam.materialNo != ''">
                 and d1.material_no like CONCAT('%',#{documentQueryParam.materialNo}, '%')
             </if>
+            <if test="documentQueryParam.departId != null and documentQueryParam.departId != ''">
+                and d1.depart_id  = #{documentQueryParam.departId}
+            </if>
             <if test="documentQueryParam.approvalStatus != null and documentQueryParam.approvalStatus != ''">
-                and d1.approval_status like CONCAT('%',#{documentQueryParam.approvalStatus}, '%')
+                and d1.approval_status  = #{documentQueryParam.approvalStatus}
+            </if>
+            <if test="documentQueryParam.publishStatus != null and documentQueryParam.publishStatus != ''">
+                and d1.publish_status  = #{documentQueryParam.publishStatus}
             </if>
             <if test="documentQueryParam.userId != null and documentQueryParam.userId != ''">
-                and u.id like CONCAT('%',#{documentQueryParam.userId}, '%')
+                and u1.id = #{documentQueryParam.userId}
             </if>
             <if test="documentQueryParam.documentType != null and documentQueryParam.documentType.size() > 0">
                 and d1.document_type in
                 <foreach item="item" index="index" collection="documentQueryParam.documentType" open="(" separator="," close=")">
                     #{item}
                 </foreach>
+            </if>
+            <if test="documentQueryParam.sortby != null and documentQueryParam.order != null">
+                <!-- 根据传入的 sortby 和 order 进行排序 -->
+                <choose>
+                    <when test="documentQueryParam.sortby == 'createTime'">
+                        ORDER BY d1.create_time ${documentQueryParam.order}
+                    </when>
+                    <when test="documentQueryParam.sortby == 'updateTime'">
+                        ORDER BY d1.update_time ${documentQueryParam.order}
+                    </when>
+                    <when test="documentQueryParam.sortby == 'approvalTime'">
+                        ORDER BY d1.approval_time ${documentQueryParam.order}
+                    </when>
+                    <when test="documentQueryParam.sortby == 'publishTime'">
+                        ORDER BY d1.publish_time ${documentQueryParam.order}
+                    </when>
+                    <when test="documentQueryParam.sortby == 'deleted'">
+                        ORDER BY d1.deleted ${documentQueryParam.order}
+                    </when>
+                    <!-- 添加其他字段的排序条件，根据需要进行扩展 -->
+                    <otherwise>
+                        <!-- 默认排序方式 -->
+                        ORDER BY d1.id DESC
+                    </otherwise>
+                </choose>
             </if>
             <!-- <if test="documentQueryParam.documentType != null and documentQueryParam.documentType != ''"> -->
             <!--     and d1.document_type = #{documentQueryParam.documentType} -->
@@ -103,10 +166,16 @@
 
     <select id="findDocumentListByINTE" resultMap="DocumentResult">
         <include refid="selectDocumentVo"/>
-        where d1.id in (
-        select max(d2.id)
-        from document d2
-        group by d2.item_no, d2.material_no, d2.document_type, d2.sequence_no
+        where d1.approval_status = 1
+        AND d1.publish_status = 1
+        AND d1.id IN (SELECT
+        max(d3.id) FROM
+        (
+        SELECT d5.id, d5.item_no, d5.material_no, d5.document_type, d5.sequence_no FROM document d5
+        INNER JOIN user u3 ON d5.user_id = u3.id LEFT JOIN user u4 ON d5.sub_id = u4.id
+        WHERE d5.approval_status = 1 AND d5.publish_status = 1
+        ) d3
+        GROUP BY d3.item_no, d3.material_no, d3.document_type, d3.sequence_no
         )
         <if test="itemNo != null and itemNo != ''">
             and d1.item_no = #{itemNo}
@@ -143,10 +212,16 @@
 
     <select id="findDocumentListByLikeINTE" resultMap="DocumentResult">
         <include refid="selectDocumentVo"/>
-        where d1.id in(
-        select max(d2.id)
-        from document d2
-        group by d2.item_no, d2.material_no, d2.document_type, d2.sequence_no
+        where d1.approval_status = 1
+        AND d1.publish_status = 1
+        AND d1.id IN (SELECT
+        max(d3.id) FROM
+        (
+        SELECT d5.id, d5.item_no, d5.material_no, d5.document_type, d5.sequence_no FROM document d5
+        INNER JOIN user u3 ON d5.user_id = u3.id LEFT JOIN user u4 ON d5.sub_id = u4.id
+        WHERE d5.approval_status = 1 AND d5.publish_status = 1
+        ) d3
+        GROUP BY d3.item_no, d3.material_no, d3.document_type, d3.sequence_no
         )
         <if test="itemNo != null and itemNo != ''">
             and d1.item_no like CONCAT('%',#{itemNo}, '%')
@@ -157,6 +232,55 @@
                 #{documentType}
             </foreach>
         </if>
+    </select>
+    <select id="findDocumentToPublish" resultMap="DocumentResult">
+        <include refid="selectDocumentVo"/>
+        where  approval_status = 1
+        AND publish_status = 0
+        AND approval_time IS NOT NULL
+        AND approval_time &lt; DATE_SUB(NOW(), INTERVAL 12 HOUR)
+        AND d1.id in (
+        select max(d2.id)
+        from document d2
+        group by d2.item_no, d2.material_no, d2.document_type, d2.sequence_no
+        )
+    </select>
+
+    <select id="selectOneLast" resultMap="DocumentResult">
+        <include refid="selectDocumentVo"/>
+        WHERE d1.item_no = #{itemNo}
+        AND d1.sequence_no = #{sequenceNo}
+        AND d1.document_type = #{documentType}
+        AND d1.document_version &lt;&gt; #{documentVersion}
+        <if test="materialNo == null">
+            AND d1.material_no IS NULL
+        </if>
+        <if test="materialNo != null">
+            AND d1.material_no = #{materialNo}
+        </if>
+        <if test="approvalStatus != null">
+            AND d1.approval_status = 1
+        </if>
+        <if test="publishStatus != null">
+            AND d1.publish_status = 1
+        </if>
+        <if test="deleted != null">
+            AND d1.deleted = 0
+        </if>
+        order by d1.create_time desc
+        limit 1
+    </select>
+    <select id="selectByOneDate" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM document WHERE DATE(create_time) = DATE(#{date}) AND depart_id = #{departId}
+    </select>
+
+    <select id="selectPublishByOneDate" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM document WHERE DATE(publish_time) = DATE(#{date}) AND depart_id = #{departId}
+    </select>
+    <select id="findtypeDistributionDataList" resultType="com.example.demo.entity.TypeDistributionData">
+        SELECT document_type as name, COUNT(*) as value
+        FROM document
+        GROUP BY document_type
     </select>
 
 

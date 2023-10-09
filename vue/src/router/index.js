@@ -6,8 +6,18 @@ const routes = [
         path: '/',
         name: 'Layout',
         component: Layout,
-        redirect: "/home",
+        redirect: "/login",
         children: [
+            {
+                path: '/userStatus',
+                name: 'UserStatus',
+                component: () => import("@/views/UserStatus.vue")
+            },
+            {
+                path: '/echartDemo',
+                name: 'EchartDemo',
+                component: () => import("@/views/EchartDemo.vue")
+            },
             {
                 path: '/depart',
                 name: 'Depart',

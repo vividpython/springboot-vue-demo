@@ -14,9 +14,11 @@
           <span  class="fontClass">系统管理</span>
         </template>
           <el-menu-item index="/depart" v-if="user.role.roleKey === 'superuser'">部门管理</el-menu-item>
+          <el-menu-item index="/echartDemo" v-if="user.role.roleKey === 'superuser'">统计展示</el-menu-item>
           <el-menu-item index="/role" v-if="user.role.roleKey === 'superuser'">角色管理</el-menu-item>
           <el-menu-item index="/docperms" v-if="user.role.roleKey === 'superuser'">权限管理</el-menu-item>
           <el-menu-item index="/user" v-if="user.role.roleKey === 'superuser'">用户管理</el-menu-item>
+          <el-menu-item index="/userStatus" v-if="user.role.roleKey === 'superuser'">账号状态</el-menu-item>
           <el-menu-item index="/document">项目文件</el-menu-item>
           <el-menu-item index="/drawing" v-if="user.role.roleKey === 'superuser'">生产图纸</el-menu-item>
           <el-menu-item index="/news">新闻管理</el-menu-item>
@@ -31,7 +33,7 @@
       </el-menu-item>
       <el-menu-item index="4">
         <el-icon><setting /></el-icon>
-        <span class="fontClass">全员质量管理培训</span>
+        <span class="fontClass">质量管理培训</span>
       </el-menu-item>
     </el-menu>
 </div>

@@ -9,6 +9,7 @@ import com.example.demo.common.DocumentQueryParam;
 import com.example.demo.common.StringProcessor;
 import com.example.demo.entity.Document;
 import com.example.demo.entity.Drawing;
+import com.example.demo.entity.TypeDistributionData;
 import com.example.demo.mapper.DocumentMapper;
 import com.example.demo.service.DocumentService;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.annotation.Resource;
 import javax.print.Doc;
 import java.io.File;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service("documentService")
@@ -67,8 +69,13 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
             Date newDate = new Date();
             Document documentCreateTime = findDocumentCreateTime(document);
             documentCreateTime.setUpdateTime(newDate);
+            //文件版本更新之后 需要将上一个版厄本呢的文件记录的有效状态变为作废
+            documentCreateTime.setDeleted(1);
             Boolean aBoolean = modifyDocument(documentCreateTime);
             System.out.println("更新日期成功：" + aBoolean);
+
+
+
             //如果料号为空 则为备产产品
             if (document.getMaterialNo() == null ){
                 //备产产品
@@ -143,8 +150,12 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
             String documentPath = document.getDocumentPath();
             this.renameFile(documentName,documentPath,documentVersion);
             document.setDocumentPath(renameDocumentPath(documentName,documentPath,documentVersion));
+            //多选新增或者变更通知单插入的时候 审核状态设置为未校核
+            document.setApprovalStatus(0);
+            //多选新增或者变更通知单插入的时候 发布状态为未发布
+            document.setPublishStatus(0);
             // 执行插入数据操作
-            return this.baseMapper.insert(document) == 0 ? Result.error("201","添加用户失败") : Result.success();
+            return this.baseMapper.insert(document) == 0 ? Result.error("201","添加记录失败") : Result.success();
         }
     }
 
@@ -182,7 +193,8 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
             document.setDocumentName(document.getItemNo() + "_" + document.getMaterialNo() + "_" + documentTypeValue + "_" + document.getSequenceNo());
         }
 
-
+        //新增数据 需要消除前端带过来的id 让数据库去自动生成
+        document.setId(null);
 
 
         //项目编号
@@ -233,7 +245,8 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
 
             //多选新增或者变更通知单插入的时候 审核状态设置为未校核
             document.setApprovalStatus(0);
-
+            //多选新增或者变更通知单插入的时候 发布状态为未发布
+            document.setPublishStatus(0);
             // 执行插入数据操作
             return this.baseMapper.insert(document) == 0 ? Result.error("201","添加记录失败") : Result.success();
         }
@@ -326,7 +339,8 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
         Integer sequenceNo = document.getSequenceNo();
 
 
-        // 构建条件对象, 查询出当前文件的最新版本
+        // 构建条件对象, 查询出当前文件的最新版本 此处还有一个问题待解决 就是这样出来的结果可能无法发现那些虽然上传了的但是没有被审批的文件记录
+        //虽然一般更新文件的时候 必须是审批完开放了的文件才会让你审批 但是如果用户非要跟更新那些没有被审批的文件 你也是没有办法 只是这时候就没法分辨失败的原因到底是没有老版本文件还是因为没有被审批了
         QueryWrapper<Document> wrapper = new QueryWrapper<>();
 
         if (materialNo == null || materialNo.equals("")){
@@ -335,6 +349,7 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
             wrapper.eq("document_type", documentType);
             wrapper.eq("sequence_no", sequenceNo);
             wrapper.eq("approval_status", 1); // 添加approval_status字段条件 判断A01版本的文件是否已经通过审核
+            wrapper.eq("publish_status", 1); // 添加publish_status字段条件 判断A01版本的文件是否已经开放
             wrapper.eq("deleted", 0); // 添加deleted字段条件
             wrapper.orderByDesc("create_time");
             wrapper.last("limit 1");
@@ -345,6 +360,7 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
             wrapper.eq("document_type", documentType);
             wrapper.eq("sequence_no", sequenceNo);
             wrapper.eq("approval_status", 1); // 添加approval_status字段条件 判断A01版本的文件是否已经通过审核
+            wrapper.eq("publish_status", 1); // 添加publish_status字段条件 判断A01版本的文件是否已经开放
             wrapper.eq("deleted", 0); // 添加deleted字段条件
             wrapper.orderByDesc("create_time");
             wrapper.last("limit 1");
@@ -360,11 +376,13 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
             document.setUpdateTime(null);
             //文件的版本更新之后 需要将上一个版本的文件记录的更新时间设置为当前新版本新增的时间
             //document.setUpdateTime(findDocumentCreateTime(document).getCreateTime());
-            Date newDate = new Date();
-
-            document1.setUpdateTime(newDate);
-            Boolean aBoolean = modifyDocument(document1);
-            System.out.println("更新日期成功：" + aBoolean);
+            //Date newDate = new Date();
+            ////被更新文件需要更新它的更新时间
+            //document1.setUpdateTime(newDate);
+            ////对于被更新的文件需要设置它的启用状态为作废
+            //document1.setDeleted(1);
+            //Boolean aBoolean = modifyDocument(document1);
+            //System.out.println("更新日期成功：" + aBoolean);
 
 
             //获取到当前记录的最新版本
@@ -390,6 +408,9 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
             //设置审批状态为 未校核
             document.setApprovalStatus(0);
 
+            //设置审批状态为 未校核
+            document.setPublishStatus(0);
+            //重命名文件名
             this.renameFile(documentName,documentPath,documentVersion);
             //设置文件路径名
             document.setDocumentPath(renameDocumentPath(documentName,documentPath,documentVersion));
@@ -435,11 +456,25 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
         if (document == null || document.getItemNo() == null || document.getDocumentType() == null) {
             return Result.error("201", "参数错误");
         }
+        //在对文件进行更新的时候 需要判断一下文件是不是处于发布状态
+        Integer publishStatus = document.getPublishStatus();
+        if (publishStatus != null && publishStatus == 0){
+            return Result.error("201", "文件尚未发布，禁止更新");
+        }
 
         return this.baseMapper.updateById(document) == 0 ? Result.error("201","更新文件状态失败") : Result.success();
     }
 
+    @Override
+    public Result updateDeletedstatus(Document document) {
+        if (document == null || document.getItemNo() == null || document.getDocumentType() == null) {
+            return Result.error("201", "参数错误");
+        }
 
+        return this.baseMapper.updateById(document) == 0 ? Result.error("201","文件作废失败") : Result.success();
+    }
+
+    @Override
     public Boolean modifyDocument(Document document) {
         if (document == null || document.getId() == null || document.getId() <= 0) return false;
         return this.baseMapper.updateById(document) == 0 ? false : true;
@@ -518,6 +553,82 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
     @Override
     public Result<?> verifyPass(Document document) {
         if (document == null || document.getId() == null || document.getId() <= 0)  return Result.error("202","参数错误");
+
+        //设置文件的开放状态为开放
+        document.setApprovalStatus(1);
+        //如果文件通过了校核 则更新该条记录的文件校核时间 为当前时间
+        Date newDate = new Date();
+        document.setApprovalTime(newDate);
+        return Result.success(this.baseMapper.updateById(document));
+    }
+
+    @Override
+    public Result<?> publishUpdate(Document document) {
+        //插入数据的时候项目编号和文件类型不可以为空 备产的装置料号可以为空
+        if (document == null || document.getId() == null || document.getId() <= 0)  return Result.error("202","参数错误");
+
+
+        //项目编号
+        String itemNo = document.getItemNo();
+        // 产品料号
+        String materialNo = document.getMaterialNo();
+
+        // 图纸类型
+        Integer documentType = document.getDocumentType();
+        //图纸编号
+        Integer sequenceNo = document.getSequenceNo();
+        //新文件发布的时候 也就是被更新文件的信息要被更新的时候
+        //先查出来被更新的老版本文件
+        QueryWrapper<Document> wrapper = new QueryWrapper<>();
+
+        if (materialNo == null || materialNo.equals("")){
+            wrapper.select("id");
+            wrapper.eq("item_no", itemNo);
+            wrapper.eq("document_type", documentType);
+            wrapper.eq("sequence_no", sequenceNo);
+            wrapper.eq("approval_status", 1); // 添加approval_status字段条件 判断A01版本的文件是否已经通过审核
+            wrapper.eq("publish_status", 1); // 添加publish_status字段条件 判断A01版本的文件是否已经通过审核
+            wrapper.eq("deleted", 0); // 添加deleted字段条件
+            wrapper.orderByDesc("create_time");
+            wrapper.last("limit 1");
+        }else {
+            wrapper.select("id");
+            wrapper.eq("item_no", itemNo);
+            wrapper.eq("material_no", materialNo);
+            wrapper.eq("document_type", documentType);
+            wrapper.eq("sequence_no", sequenceNo);
+            wrapper.eq("approval_status", 1); // 添加approval_status字段条件 判断A01版本的文件是否已经通过审核
+            wrapper.eq("publish_status", 1); // 添加publish_status字段条件 判断A01版本的文件是否已经通过审核
+            wrapper.eq("deleted", 0); // 添加deleted字段条件
+            wrapper.orderByDesc("create_time");
+            wrapper.last("limit 1");
+        }
+        if (this.baseMapper.selectOne(wrapper) != null) {
+            //
+            Document document1 = this.baseMapper.selectById(this.baseMapper.selectOne(wrapper).getId());
+            ////这里需要对时间进行处理 对被更新的记录需要把新版本文件的创建时间设置为它的更新时间
+
+            Date newDate = new Date();
+            //被更新文件需要更新它的更新时间
+            document1.setUpdateTime(newDate);
+            //对于被更新的文件需要设置它的启用状态为作废
+            document1.setDeleted(1);
+            Boolean aBoolean = modifyDocument(document1);
+            System.out.println("更新日期成功：" + aBoolean);
+
+        }else{
+
+            Result.error("201","旧版本文件查询出错，禁止开放");
+        }
+
+
+            //如果文件通过了开放 则更新该条记录的文件开放时间 为当前时间
+
+        Date newDate = new Date();
+        document.setPublishTime(newDate);
+
+        //设置文件的发布状态为发布
+        document.setPublishStatus(1);
         return Result.success(this.baseMapper.updateById(document));
     }
 
@@ -527,7 +638,11 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
         Object data = documentById.getData();
         if (data instanceof Document) {
             Document document = (Document) data;
+            //设置文件的开放状态为开放
             document.setApprovalStatus(1);
+            //如果文件通过了校核 则更新该条记录的文件校核时间 为当前时间
+            Date newDate = new Date();
+            document.setApprovalTime(newDate);
             return this.baseMapper.updateById(document);
         }else{
             return 0;
@@ -540,6 +655,14 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
         return this.baseMapper.departConfirm(document);
     }
 
+    @Override
+    public Integer selectByOneDate(Date date,Integer departId) {
+        return this.baseMapper.selectByOneDate(date,departId);
+    }
+    @Override
+    public Integer selectPublishByOneDate(Date date,Integer departId) {
+        return this.baseMapper.selectPublishByOneDate(date,departId);
+    }
 
     /**
      * @description: 查询文件的历史版本
@@ -595,6 +718,12 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
             documents = this.baseMapper.findDocumentMore(ids);
         }
         return documents;
+    }
+
+    @Override
+    public List<Document> findDocumentToPublish() {
+        List<Document> documentListToPublish =  this.baseMapper.findDocumentToPublish();
+        return documentListToPublish;
     }
 
 
@@ -666,6 +795,18 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper,Document> im
         }
         return document.getDocumentVersion();
     }
+
+    @Override
+    public List<TypeDistributionData> selectTypeDistribution() {
+        List<TypeDistributionData> typeDistributionDataList =  this.baseMapper.findtypeDistributionDataList();
+        return typeDistributionDataList;
+    }
+
+    @Override
+    public Document selectOneLast(Document document) {
+        return  this.baseMapper.selectOneLast(document);
+    }
+
 
     public String renameDocumentPath(String documentName, String documentPath,String documentVersion) {
 

@@ -7,15 +7,15 @@ module.exports = {
         target: 'http://localhost:9090',     //代理的目标地址
         changeOrigin: true,              //是否设置同源，输入是的
         pathRewrite: {                   //路径重写
-          '^/api': ''                     //选择忽略拦截器里面的内容
-        }
-      }
+          '^/api': '',                     //选择忽略拦截器里面的内容
+        },
+      },
     },
-
     // 添加后， WebSocket 就不会报错了
     client: {
-      webSocketURL: 'ws://0.0.0.0:9876/ws'
+      webSocketURL: 'ws://0.0.0.0:9876/ws',
     }
   }
 }
+
 

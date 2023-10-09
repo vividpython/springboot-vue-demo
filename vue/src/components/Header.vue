@@ -11,12 +11,20 @@
     <div style="flex: 1;"></div>
     <div style="width: 100px; display: flex; align-items: center; justify-content: center;">
       <el-dropdown>
-    <span class="el-dropdown-link" style="font-weight: bold; color: white">
-      {{user?.nickName}}
-      <el-icon class="el-icon--right" style="font-weight: bold; color: white">
-        <ArrowDown />
-      </el-icon>
-    </span>
+        <el-image
+            class="el-dropdown-link"
+            style="width: 40px; height: 40px"
+            :src="user?.img || '/static/default.png'"
+            :preview-src-list="[user?.img]"
+            preview-teleported="preview-teleported"
+        >
+        </el-image>
+    <!--<span class="el-dropdown-link" style="font-weight: bold; color: white">-->
+    <!--  {{user?.nickName}}-->
+    <!--  <el-icon class="el-icon&#45;&#45;right" style="font-weight: bold; color: white">-->
+    <!--    <ArrowDown />-->
+    <!--  </el-icon>-->
+    <!--</span>-->
         <template #dropdown>
           <el-dropdown-menu>
             <el-dropdown-item @click="$router.push('/person')">个人信息</el-dropdown-item>

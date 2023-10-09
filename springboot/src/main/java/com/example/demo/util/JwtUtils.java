@@ -1,13 +1,17 @@
 package com.example.demo.util;
 
+import cn.hutool.jwt.Claims;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.interfaces.Claim;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import org.springframework.stereotype.Component;
 
 import java.io.UnsupportedEncodingException;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Map;
 
 /**
  * @program:
@@ -84,5 +88,11 @@ public class JwtUtils {
             return "getClaimFalse";
         }
         return claim;
+    }
+
+
+    public static Date getIssuedAt(String token) throws UnsupportedEncodingException {
+        DecodedJWT decodedJWT = JWT.decode(token);
+        return decodedJWT.getIssuedAt();
     }
 }

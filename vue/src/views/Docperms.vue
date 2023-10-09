@@ -21,36 +21,41 @@
       </el-form>
     </div>
     <!--内容区域-->
-    <el-table
-        v-loading="loading"
-        :data="tableData"
-        style="width: 100%;"
-        border
-        class="table"
-        :stripe="false"
-        fit
-    >
-      <el-table-column prop="id" label="ID" sortable/>
-      <el-table-column prop="name" label="权限名称"/>
-      <el-table-column prop="perms" label="权限标识"/>
-      <el-table-column prop="parentId" label="父ID"/>
-      <el-table-column prop="type" label="权限类型"/>
-      <el-table-column prop="createTime" label="创建时间"/>
-      <el-table-column prop="updateTime" label="更新时间"/>
-      <el-table-column fixed="right" label="操作" width="170">
-        <template #default="scope">
-          <el-button size="small" @click="handleEdit(scope.row)"
-          >编辑
-          </el-button
-          >
-          <el-popconfirm title="Are you sure to delete this?" @confirm="handleDelete(scope.row.id)">
-            <template #reference>
-              <el-button type="danger" size="small">删除</el-button>
+    <div style="height: 500px;">
+      <el-scrollbar wrap-class="scrollbar-wrap">
+          <el-table
+            v-loading="loading"
+            :data="tableData"
+            style="width: 100%;"
+            border
+            class="table"
+            :stripe="false"
+            fit
+        >
+          <el-table-column prop="id" label="ID" sortable/>
+          <el-table-column prop="name" label="权限名称"/>
+          <el-table-column prop="perms" label="权限标识"/>
+          <el-table-column prop="parentId" label="父ID"/>
+          <el-table-column prop="type" label="权限类型"/>
+          <el-table-column prop="createTime" label="创建时间"/>
+          <el-table-column prop="updateTime" label="更新时间"/>
+          <el-table-column fixed="right" label="操作" width="170">
+            <template #default="scope">
+              <el-button size="small" @click="handleEdit(scope.row)"
+              >编辑
+              </el-button
+              >
+              <el-popconfirm title="Are you sure to delete this?" @confirm="handleDelete(scope.row.id)">
+                <template #reference>
+                  <el-button type="danger" size="small">删除</el-button>
+                </template>
+              </el-popconfirm>
             </template>
-          </el-popconfirm>
-        </template>
-      </el-table-column>
-    </el-table>
+          </el-table-column>
+        </el-table>
+
+      </el-scrollbar>
+    </div>
     <!--分页条-->
     <div style="margin: 10px ; padding: 0px">
       <el-pagination
@@ -233,6 +238,10 @@ export default {
 }
 </script>
 <style>
+.scrollbar-wrap {
+  position: relative;
+  height: 100%;
+}
 .table tbody tr:nth-child(odd) {
   background-color: #F5F5F5;
 }

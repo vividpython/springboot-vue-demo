@@ -45,8 +45,19 @@ public class Document {
     //变更人id
     private Integer subId;
 
+
+    //部门id 即文件所属的事业部 由创建人创建时所在的部门决定
+    private Integer departId;
+
+
+
     //默认值为0 表示启用 当值为1时表示弃用/作废
     private Integer deleted;  // 逻辑删除
+
+    //备注字段  显示文件的源文件名称
+    private String comment;
+
+
     //创建人
     @TableField(exist = false)  // 此字段不更新
     private User user;    // 创建人信息

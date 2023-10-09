@@ -16,7 +16,6 @@
         <result property="version"    column="version"    />
         <result property="deleted"    column="deleted"    />
         <result property="departId"    column="depart_id"    />
-        <result property="permission"    column="permission"    />
         <association property="depart"  column="depart_id" select="getDepartById"></association>
         <association property="role"  column="role_id" select="getRoleById"></association>
     </resultMap>
@@ -54,16 +53,30 @@
         where u.username = #{username}
     </select>
 
-    <select id="findListByName" parameterType="java.lang.String" resultMap="UserResult">
+    <!-- <select id="findListByName" resultMap="UserResult"> -->
+    <!--     <include refid="selectUserVo"/> -->
+    <!--     <where> -->
+    <!--         <if test="userName != null"> -->
+    <!--             and u.username like CONCAT('%',#{usertName}, '%') -->
+    <!--         </if> -->
+    <!--         and u.deleted = 0 -->
+    <!--     </where> -->
+    <!--     order by u.id desc -->
+    <!-- </select> -->
+    <select id="findListByName" resultMap="UserResult">
         <include refid="selectUserVo"/>
         <where>
             <if test="userName != null">
-                and u.username like CONCAT('%',#{usertName}, '%')
+                and u.nick_name like CONCAT('%', #{userName}, '%')
+            </if>
+            <if test="departParentId != null">
+                and u.depart_id IN (
+                SELECT d.id FROM depart d WHERE d.parent_id = #{departParentId}
+                )
             </if>
             and u.deleted = 0
         </where>
         order by u.id desc
-        limit 15
     </select>
 
     <select id="selectByIdNow" parameterType="java.lang.Integer" resultMap="UserResult">

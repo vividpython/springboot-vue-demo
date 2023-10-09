@@ -149,9 +149,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper,User> implements Use
     }
 
     @Override
-    public Result<?> findListByName(String userName) {
+    public Result<?> findListByName(String userName,Integer departParentId) {
         if (userName == null ) return Result.error("201","参数错误");
-        return  Result.success(this.baseMapper.findListByName(userName)) ;
+        return  Result.success(this.baseMapper.findListByName(userName,departParentId)) ;
     }
 
     @Override
@@ -170,6 +170,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper,User> implements Use
         //更新查到的用户的密码为默认密码
         return  Result.success(this.baseMapper.updateById(userInfolog));
 
+    }
+
+    @Override
+    public Result updateUserstatus(User user) {
+        if (user == null || user.getStatus() == null) {
+            return Result.error("201", "参数错误");
+        }
+
+        return this.baseMapper.updateById(user) == 0 ? Result.error("201","账号状态操作失败") : Result.success();
     }
 
 

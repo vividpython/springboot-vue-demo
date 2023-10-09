@@ -23,5 +23,10 @@ public interface DepartMapper extends BaseMapper<Depart> {
      */
     IPage<Depart> findDepartList(Page<Depart> page, DepartQueryParam departQueryParam);
 
-    List<Depart> findByNameList(String departName);
+    List<Depart> findSuperDepartByNameList(String departName);
+    List<Depart> findListByName(String departName);
+
+
+
+
 }

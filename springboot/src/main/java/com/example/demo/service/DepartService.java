@@ -33,5 +33,7 @@ public interface DepartService extends IService<Depart> {
      */
 
     Depart getDepartById(Integer id);
-    Result<?> findByNameList(String departName);
+    Result<?> findSuperDepartByNameList(String departName);
+    Result<?> findListByName(String departName);
+
 }

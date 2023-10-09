@@ -69,10 +69,18 @@ public class DepartController {
     }
 
 
+    @PostMapping("/findSuperDepartByNameList")
+    public Result<?> findSuperDepartByNameList(@RequestBody String departName) {
+        System.out.println("departName:" + departName.substring(1, departName.length() - 1));
+        Result<?> result=  departService.findSuperDepartByNameList(departName.substring(1, departName.length() - 1));
+        System.out.println("this is pull test code...");
+        return result;
+    }
+
     @PostMapping("/findListByName")
     public Result<?> findListByName(@RequestBody String departName) {
-        System.out.println("departName:" + departName.substring(1, departName.length() - 1));
-        Result<?> result=  departService.findByNameList(departName.substring(1, departName.length() - 1));
+        System.out.println("userName:" + departName.substring(1, departName.length() - 1));
+        Result<?> result=  departService.findListByName(departName.substring(1, departName.length() - 1));
         System.out.println("this is pull test code...");
         return result;
     }

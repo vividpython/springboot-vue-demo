@@ -1,36 +1,4 @@
-<!--<template>-->
-<!--<div style="width: 100%;height: 100vh;background-color: #8A77A5 ;overflow: hidden">-->
-<!--  <div style="width: 400px;margin: 150px auto">-->
-<!--    <div style="color: #cccccc ;font-size: 30px;text-align: center">欢迎登录</div>-->
-<!--    <el-form ref="form" :rules="rules" :model="form" size="default">-->
-<!--      <el-form-item prop="username">-->
-<!--        <el-input placeholder="用户名" :prefix-icon="UserFilled" v-model="form.username" />-->
-<!--      </el-form-item>-->
-<!--      <el-form-item prop="password">-->
-<!--        <el-input placeholder="密码" :prefix-icon="lock" v-model="form.password" show-password/>-->
-<!--      </el-form-item>-->
-<!--      <el-form-item>-->
-<!--        <div style="display:flex" id="atilposition">-->
-<!--          <input-->
-<!--              type="text"-->
-<!--              ref="inputCode"-->
-<!--              v-model="inputCode"-->
-<!--              style="width:240px"-->
-<!--              placeholder="请输入验证码,点击右边图片可刷新"-->
-<!--              clearable-->
-<!--          />-->
-<!--          <span @click="createCode" id="spancode">-->
-<!--                <ValidCode :identifyCode="code"></ValidCode>-->
-<!--              </span>-->
-<!--        </div>-->
-<!--      </el-form-item>-->
-<!--      <el-form-item >-->
-<!--        <el-button style="width: 100%" type="primary" @click="login">登录</el-button>-->
-<!--      </el-form-item>-->
-<!--    </el-form>-->
-<!--  </div>-->
-<!--</div>-->
-<!--</template>-->
+
 <template>
     <div style="width: 100%;height: 100vh;
     background-image: linear-gradient(to right, #3B455B, #5d5070);
@@ -53,23 +21,28 @@
           <el-form-item prop="password">
             <el-input :placeholder="$t('login.password')" :prefix-icon="lock" v-model="form.password" show-password/>
           </el-form-item>
+          <!--<el-form-item>-->
+          <!--  <div style="display:flex" id="atilposition">-->
+          <!--    <input-->
+          <!--        type="text"-->
+          <!--        ref="inputCode"-->
+          <!--        v-model="inputCode"-->
+          <!--        style="width:240px"-->
+          <!--        :placeholder="$t('login.inputCode')"-->
+          <!--        clearable-->
+          <!--    />-->
+          <!--    <span @click="createCode" id="spancode">-->
+          <!--      <ValidCode :identifyCode="code"></ValidCode>-->
+          <!--    </span>-->
+          <!--  </div>-->
+          <!--</el-form-item>-->
           <el-form-item>
-            <div style="display:flex" id="atilposition">
-              <input
-                  type="text"
-                  ref="inputCode"
-                  v-model="inputCode"
-                  style="width:240px"
-                  :placeholder="$t('login.inputCode')"
-                  clearable
-              />
-              <span @click="createCode" id="spancode">
-                <ValidCode :identifyCode="code"></ValidCode>
-              </span>
-            </div>
+              <!-- 记住我 -->
+              <el-checkbox v-model="checked">记住我</el-checkbox>
           </el-form-item>
           <el-form-item >
-            <el-button style="width: 100%" type="primary" @click="login">{{ $t('login.submit') }}</el-button>
+            <Vcode :show="isShow" @success="onSuccess" @close="onClose" @fail="onfail" />
+            <el-button style="width: 100%" type="primary" @click="submitForm">{{ $t('login.submit') }}</el-button>
           </el-form-item>
           <!--<el-form-item >-->
           <!--  <el-button  type="primary" @click="switchLanguage">{{ currentLanguage }}/></el-button>-->
@@ -94,8 +67,8 @@
             </el-form-item>
         </el-form>
       </div>
-    </div>
 
+    </div>
 </template>
 <script>
 import {UserFilled} from "@element-plus/icons";
@@ -103,15 +76,17 @@ import lock from "@element-plus/icons/lib/Lock";
 import request from "@/utils/request";
 import {ElMessage} from "element-plus";
 import { useI18n } from 'vue-i18n';
-
+import { ref } from "vue";
+import Vcode from "vue3-puzzle-vcode";
 import ValidCode from "@/components/ValidCode.vue";
 
-
+const Base64 = require("js-base64").Base64
 
 export default {
 
   components:{
-    ValidCode
+    // ValidCode,
+    Vcode
   },
   name: "Login",
 
@@ -128,9 +103,16 @@ export default {
   },
   data(){
     return{
+      isShow:false,
       code:'',
-      inputCode:'',
-      form:{},
+      // inputCode:'',
+      form:{
+        username: "",
+        password: "",
+      },
+
+      checked: false,
+
       loading: false,
       svg : `
         <path class="path" d="
@@ -142,57 +124,67 @@ export default {
           L 15 15
         " style="stroke-width: 4px; fill: rgba(0, 0, 0, 0)"/>
       `,
-      rules : ({
+      rules : {
         username: [
           { required: true, message: this.$t('login.usernameRequired'), trigger: 'blur' },
         ],
         password: [
           { required: true, message: this.$t('login.passwordRequired'), trigger: 'blur'}
-        ],
-        inputCode: [
-          { required: true, message: this.$t('login.inputCodeRequired'), trigger: 'blur'}
         ]
-      })
+        // inputCode: [
+        //   { required: true, message: this.$t('login.inputCodeRequired'), trigger: 'blur'}
+        // ]
+      }
     }
+  },
+  mounted() {
+    this.getCookie();
   },
   methods:{
     switchLanguage(locale) {
       this.$i18n.locale = locale
     },
-    createCode() {
-      let text = "";
-      let possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-      // 设置验证码长度，
-      for( let i=0; i < 4; i++ ){
-        text += possible.charAt(Math.floor(Math.random() * possible.length));
+    // createCode() {
+    //   let text = "";
+    //   let possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    //   // 设置验证码长度，
+    //   for( let i=0; i < 4; i++ ){
+    //     text += possible.charAt(Math.floor(Math.random() * possible.length));
+    //   }
+    //   this.code = text
+    // },
+    submitForm() {
+      // 检查账号和密码是否为空
+      if (!this.form.username || !this.form.password) {
+        ElMessage({
+          message: this.$t('login.inputNullError'),
+          type: 'error',
+        })
+        return;
       }
-      this.code = text
+      this.isShow=true
     },
-
-    login(){
-
+    //滑块验证成功
+    onSuccess(msg) {
+      console.log("验证成功")
+      this.isShow=false
       this.loading = true; // 显示Loading遮罩
       let _this = this;
+
       this.$refs['form'].validate((valid) => {
         if (valid) {
-          if(this.inputCode === ''){
-            ElMessage({
-              message: this.$t('login.inputCodeRequired'),
-              type: 'warning',
-            })
-            return
+
+          /* ------ 账号密码的存储 ------ */
+
+          if (this.checked) {
+            let password = Base64.encode(this.form.password); // base64加密
+            this.setCookie(this.form.username, password, 7);
+          } else {
+            this.setCookie("", "", -1); // 修改2值都为空，天数为负1天就好了
           }
-          if(this.inputCode.toLowerCase() !== this.code.toLowerCase()){
-            ElMessage({
-              message: this.$t('login.inputCodeError'),
-              type: 'error',
-            })
-            this.inputCode = ''
-            this.createCode()
-            this.loading = false; // 隐藏Loading遮罩
-            return
-          }
-          //提交操作
+
+          //可以在此加上axios或其他代码
+          // this.login();
           try {
             request.post("/login",this.form).then(res =>{
               if (res.code === '0'){
@@ -202,17 +194,27 @@ export default {
                 })
 
 
-                console.log("res.data==" + res.data.token)
+                // console.log("res.data==" + res.data.token)
                 sessionStorage.setItem("token", JSON.stringify( res.data.token))
 
-                _this.$router.push("/")
-              }else {
+                _this.$router.push("/home")
+              }else if(res.code === '201') {
                 ElMessage({
                   message: this.$t('login.error'),
                   type: 'error',
                 })
-                this.inputCode = ''
-                this.createCode()
+                // this.inputCode = ''
+                // this.createCode()
+              }else if(res.code === '403'){
+                ElMessage({
+                  message: this.$t('login.banStatusError'),
+                  type: 'error',
+                })
+              }else{
+                ElMessage({
+                  message: res.msg,
+                  type: 'error',
+                })
               }
             })
           }catch (error){
@@ -220,113 +222,54 @@ export default {
           }finally {
             this.loading = false; // 隐藏Loading遮罩
           }
+        }
+      })
 
-        }})
+    },
+    // 设置cookie
+    setCookie(username, password, days) {
+      let date = new Date(); // 获取时间
+      date.setTime(date.getTime() + 24 * 60 * 60 * 1000 * days); // 保存的天数
+      // 字符串拼接cookie
+      window.document.cookie =
+          "username" + "=" + username + ";path=/;expires=" + date.toGMTString();
+      window.document.cookie =
+          "password" + "=" + password + ";path=/;expires=" + date.toGMTString();
+    },
+// 读取cookie 将用户名和密码回显到input框中
+    getCookie() {
+      if (document.cookie.length > 0) {
+        let arr = document.cookie.split("; "); //分割成一个个独立的“key=value”的形式
+        for (let i = 0; i < arr.length; i++) {
+          let arr2 = arr[i].split("="); // 再次切割，arr2[0]为key值，arr2[1]为对应的value
+          if (arr2[0] === "username") {
+            this.form.username = arr2[1];
+          } else if (arr2[0] === "password") {
+            this.form.password = Base64.decode(arr2[1]);// base64解密
+            this.checked = true;
+          }
+        }
+      }
+    },
 
-    }
+    // 关闭滑块验证后提示用户取消验证
+    onClose() {
+      this.isShow=false
+      this.$message({
+        message: '取消验证！',
+        type: 'warning'
+      });
+    },
+    onfail(){
+      console.log("验证失败")
+    },
+
   },
-  mounted() {
-    this.createCode()
-  },
+  // mounted() {
+  //   this.createCode()
+  // },
  };
 </script>
-<!--export default {-->
-<!--  components:{-->
-<!--    ValidCode-->
-<!--  },-->
-<!--  name: "Login",-->
-<!--  computed: {-->
-<!--    lock() {-->
-<!--      return lock-->
-<!--    },-->
-<!--    UserFilled() {-->
-<!--      return UserFilled-->
-<!--    },-->
-<!--  },-->
-<!--  data(){-->
-<!--    return{-->
-<!--      code:'',-->
-<!--      inputCode:'',-->
-
-<!--      form:{},-->
-<!--      rules : ({-->
-<!--        username: [-->
-<!--          { required: true, message: '请输入用户名', trigger: 'blur' },-->
-<!--        ],-->
-<!--        password: [-->
-<!--          { required: true, message: '请输入密码', trigger: 'blur' },-->
-<!--        ]})-->
-<!--    }-->
-<!--  },-->
-<!--  created() {-->
-<!--    sessionStorage.removeItem("user")-->
-<!--  },-->
-<!--  mounted() {-->
-
-<!--    this.createCode()-->
-<!--  },-->
-<!--  methods:{-->
-<!--    createCode() {-->
-<!--      let text = "";-->
-<!--      let possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";-->
-<!--      // 设置验证码长度，-->
-<!--      for( let i=0; i < 4; i++ ){-->
-<!--        text += possible.charAt(Math.floor(Math.random() * possible.length));-->
-<!--      }-->
-<!--      this.code = text-->
-<!--    },-->
-
-<!--    login(){-->
-
-
-<!--      let _this = this;-->
-<!--      this.$refs['form'].validate((valid) => {-->
-<!--        if (valid) {-->
-<!--          if(this.inputCode === ''){-->
-<!--            ElMessage({-->
-<!--              message: '请输入验证码',-->
-<!--              type: 'warning',-->
-<!--            })-->
-<!--            return-->
-<!--          }-->
-<!--          if(this.inputCode.toLowerCase() !== this.code.toLowerCase()){-->
-<!--            ElMessage({-->
-<!--              message: '验证码错误',-->
-<!--              type: 'error',-->
-<!--            })-->
-<!--            this.inputCode = ''-->
-<!--            this.createCode()-->
-<!--            return-->
-<!--          }-->
-<!--          //提交操作-->
-
-<!--          request.post("/user/login",this.form).then(res =>{-->
-<!--            if (res.code === '0'){-->
-<!--              ElMessage({-->
-<!--                message: '登录成功',-->
-<!--                type: 'success',-->
-<!--              })-->
-
-
-<!--              console.log("res.data==" + res.data.token)-->
-<!--              sessionStorage.setItem("token", JSON.stringify( res.data.token))-->
-
-<!--              _this.$router.push("/")-->
-<!--            }else {-->
-<!--              ElMessage({-->
-<!--                message: '用户名或密码错误',-->
-<!--                type: 'error',-->
-<!--              })-->
-<!--              this.inputCode = ''-->
-<!--              this.createCode()-->
-<!--            }-->
-<!--          })-->
-<!--        }})-->
-
-<!--    }-->
-<!--  }-->
-<!--}-->
-<!--</script>-->
 
 <style>
 .active {

@@ -4,8 +4,11 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.demo.common.DocumentQueryParam;
 import com.example.demo.common.Result;
 import com.example.demo.entity.Document;
+import com.example.demo.entity.TypeDistributionData;
 import com.example.demo.entity.User;
 
+import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 
 public interface DocumentService extends IService<Document> {
@@ -34,7 +37,6 @@ public interface DocumentService extends IService<Document> {
      */
 
     Result confirmDocument(Document document);
-
     /**
      * @description: 更新（设计变更）
      * @param document: 
@@ -46,6 +48,8 @@ public interface DocumentService extends IService<Document> {
     Result updateDocumentM(Document document);
     //更新图纸状态
     Result updatestatus(Document document);
+
+    Result updateDeletedstatus(Document document);
     /**
      * 分页查询图纸列表
      * @param index 当前页
@@ -70,23 +74,30 @@ public interface DocumentService extends IService<Document> {
 
 
     Result<?> verifyPass( Document document);
-
+    Result<?> publishUpdate( Document document);
     Integer verifyPassById(Integer id);
 
     Integer departConfirm( Document document);
 
-
+    Integer selectByOneDate(Date date,Integer departId);
+    Integer selectPublishByOneDate(Date date,Integer departId);
     Result<?> findHistoryList(Integer index, Integer size, Document document);
 
     Result<?> deleteDocumentMore(List<Integer> ids);
 
 
     List<Document> findDocumentMore(List<Integer> ids);
-
+    List<Document> findDocumentToPublish();
 
     Integer getMaxFileNumber(String ItemNo, String materialNo, Integer documentType);
 
     Result<?> getFilePath(String itemNo, List<Integer> documentTypeList);
 
     String getNowDocumentVersion(Integer id);
+
+    List<TypeDistributionData> selectTypeDistribution();
+
+    Document selectOneLast(Document document);
+
+    Boolean modifyDocument(Document document);
 }

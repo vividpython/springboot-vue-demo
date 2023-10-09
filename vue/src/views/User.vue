@@ -45,11 +45,10 @@
       <!--</el-table-column>-->
       <el-table-column label="用户角色" prop="role.name" />
       <el-table-column label="部门名称" prop="depart.name" />
-      <el-table-column prop="permission" label="权限"/>
       <el-table-column  label="头像">
         <template #default="scope">
           <el-image
-              style="width: 100px; height: 100px"
+              style="width: 50px; height: 50px"
               :src="scope.row.img || '/static/default.png'"
               :preview-src-list="[scope.row.img]"
               preview-teleported="preview-teleported"
@@ -110,9 +109,6 @@
               :value-key="'label'"
               @select="handleRoleSelect"
           ></el-autocomplete>
-        </el-form-item>
-        <el-form-item label="权限">
-          <el-input v-model="form.permission" style="width: 80%"/>
         </el-form-item>
         <el-form-item label="部门名称" prop="departId">
           <el-autocomplete
@@ -243,6 +239,7 @@ export default {
     },
     filesUploadSuccess(res){
       this.form.img = res.data;
+      console.log("this.form.img:" + this.form.img)
     },
     delay(time) {
       return new Promise(resolve => setTimeout(resolve, time));

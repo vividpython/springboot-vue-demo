@@ -22,12 +22,50 @@
         <h2 class="home-card-title">系统设置</h2>
         <p class="home-card-desc">对生产文件管理系统的系统配置和参数进行修改和维护。</p>
       </div>
+      <div class="home-card">
+        <i class="home-card-icon el-icon-setting"></i>
+        <el-button color="#3B455B" style="color: white" @click="computerCount" >计算人数</el-button>
+        <p class="home-card-desc">对生产文件管理系统的系统配置和参数进行修改和维护。</p>
+      </div>
     </div>
   </div>
 </template>
 <script>
+import request from "@/utils/request";
+import {ElMessage} from "element-plus";
+
+
 export default {
   name: 'Home',
+  components: {},
+  data() {
+    return {
+      count:-1
+    }
+  },
+
+  methods: {
+    computerCount(){
+      request.get("/getOnlineCount").then(res => {
+            console.log(res);
+            if (res.code === '0') {
+              ElMessage({
+                message: '接口获取成功',
+                type: 'success',
+                //
+              })
+              console.log("count:" + res.data);
+            } else {
+              ElMessage({
+                message: '接口获取失败',
+                type: 'error',
+                //
+              })
+            }
+          }
+      )
+    }
+  }
 }
 </script>
 <style scoped>

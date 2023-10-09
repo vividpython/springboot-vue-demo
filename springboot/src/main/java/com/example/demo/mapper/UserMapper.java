@@ -28,6 +28,6 @@ public interface UserMapper extends BaseMapper<User> {
 
     User selectByIdNow(Integer id);
 
-    List<Depart> findListByName(String userName);
+    List<Depart> findListByName(String userName,Integer departParentId);
 
 }

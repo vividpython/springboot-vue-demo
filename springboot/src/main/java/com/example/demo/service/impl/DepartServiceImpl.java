@@ -81,8 +81,14 @@ public class DepartServiceImpl extends ServiceImpl<DepartMapper, Depart> impleme
     }
 
     @Override
-    public Result<?> findByNameList(String departName) {
+    public Result<?> findSuperDepartByNameList(String departName) {
         if (departName == null ) return Result.error("201","参数错误");
-        return  Result.success(this.baseMapper.findByNameList(departName)) ;
+        return  Result.success(this.baseMapper.findSuperDepartByNameList(departName)) ;
+    }
+
+    @Override
+    public Result<?> findListByName(String departName) {
+        if (departName == null ) return Result.error("201","参数错误");
+        return  Result.success(this.baseMapper.findListByName(departName)) ;
     }
 }

@@ -2,10 +2,13 @@ package com.example.demo.filter;
 
 
 import com.alibaba.fastjson.JSON;
+import com.example.demo.common.OnlineCounter;
 import com.example.demo.common.Result;
 import com.example.demo.shiro.JWTToken;
 import org.apache.shiro.web.filter.authc.BasicHttpAuthenticationFilter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import javax.servlet.ServletRequest;
@@ -24,8 +27,12 @@ import java.net.URLEncoder;
  * @author: Zheng
  * @date: 2023/6/2 9:35
  */
-
+@Component
 public class JwtFilter extends BasicHttpAuthenticationFilter {
+
+
+    @Autowired
+    private OnlineCounter onlineCounter;
 
     /**
      * 拦截器的前置  最先执行的 这里只做了一个跨域设置
@@ -43,6 +50,22 @@ public class JwtFilter extends BasicHttpAuthenticationFilter {
             res.setStatus(HttpStatus.OK.value());
             return false;
         }
+
+        // 允许跨域
+        res.setHeader("Access-Control-Allow-Origin", "*");
+
+        // 后台管理页面产生的token
+        String token = req.getHeader("token");
+
+        // 存储该token方便记录在线人数
+        if (onlineCounter != null) {
+            try {
+                onlineCounter.insertToken(token);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
         return super.preHandle(request, response);
     }
 

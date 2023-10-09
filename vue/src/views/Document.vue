@@ -1,3 +1,6 @@
+
+
+
 <template #default="scope">
   <div style="padding: 10px;">
 
@@ -18,7 +21,7 @@
         <el-form-item label="项目编号">
           <el-input v-model="formInline.itemNo" placeholder="Please input"/>
         </el-form-item>
-        <el-form-item label="创建人">
+        <el-form-item label="创建人" >
           <el-autocomplete
               v-model="userInputValue"
               :fetch-suggestions="queryUserSearchAsync"
@@ -44,7 +47,7 @@
         </el-form-item>
         <el-form-item label="创建时间">
           <el-date-picker
-              v-model="daterange"
+              v-model="createTimeDaterange"
               type="datetimerange"
               :shortcuts="shortcuts"
               range-separator="至"
@@ -53,11 +56,36 @@
           >
           </el-date-picker>
         </el-form-item>
+        <el-form-item label="下发时间"
+                      v-if="user.role.roleKey === 'superuser' || (user.role.roleKey === 'regular_user' && user.depart.parentId !== 8 && user.depart.parentId !== 9)">
+          <el-date-picker
+              v-model="publishTimeDaterange"
+              type="datetimerange"
+              :shortcuts="shortcuts"
+              range-separator="至"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+          >
+          </el-date-picker>
+        </el-form-item>
+
+
+        <el-form-item label="所属部门"
+                      v-if="user.role.roleKey === 'superuser' || (user.role.roleKey === 'regular_user' && user.depart.parentId !== 8 && user.depart.parentId !== 9)">
+          <el-autocomplete
+              v-model="formInline.superDepartInputValue"
+              :fetch-suggestions="querySuperDepartSearchAsync"
+              :popper-append-to-body="true"
+              :placeholder="'请输入事业部名称'"
+              :trigger-on-focus="true"
+              :value-key="'label'"
+              @select="handleSuperDepartSelect"
+          ></el-autocomplete>
+        </el-form-item>
+
         <el-form-item>
           <el-button type="primary" style="margin-left: 5px" :icon="Search" @click="load">查询</el-button>
           <el-button type="warning" style="margin-left: 5px" :icon="RefreshLeft" @click="reset">重置</el-button>
-
-
         </el-form-item>
       </el-form>
     </div>
@@ -77,128 +105,169 @@
       </el-popconfirm>
     </div>
     <!--内容区域-->
-    <el-table
-        v-loading="loading"
-        :data="tableData"
-        style="width: 100% "
-        border
-        class="table"
-        :stripe="false"
-        @selection-change="handleSelectionChange"
-    >
-      <el-table-column type="selection" width="55"/>
-      <el-table-column prop="id" label="ID" sortable />
-      <el-table-column prop="itemNo" label="项目编号" width="100"/>
-      <el-table-column prop="materialNo" label="料号" width="100"/>
-      <el-table-column prop="documentName" label="文件名称" show-overflow-tooltip/>
-      <el-table-column prop="documentType" label="文件类型" show-overflow-tooltip>
-        <template #default="scope">
-          {{ getDocumentType(scope.row.documentType) }}
-        </template>
-      </el-table-column>
-      <el-table-column prop="sequenceNo" label="文件序号" show-overflow-tooltip/>
-      <el-table-column prop="documentVersion" label="文件版本" show-overflow-tooltip/>
-      <el-table-column prop="user.nickName" label="创建人" show-overflow-tooltip/>
-      <el-table-column prop="substitution.nickName" label="变更人" show-overflow-tooltip/>
-      <el-table-column prop="documentPath" label="文件路径" :min-width="200" show-overflow-tooltip :ellipsis="true"
-                       style="white-space: nowrap; word-break: break-all;"/>
 
-      <el-table-column
-          prop="deleted"
-          label="是否启用"
-          align="center"
-          sortable
-          show-overflow-tooltip
+    <div style="height: 500px;">
+      <el-scrollbar wrap-class="scrollbar-wrap">
+        <el-table
+          v-loading="loading"
+          :data="tableData"
+          style="width: 100%;font-size: 14px; height: 500px; font-family: Arial, sans-serif; font-weight: bold;"
+          :header-cell-style="{'text-align':'center'}"
+          :cell-style="{'text-align':'center'}"
+          border
+          class="table"
+          :stripe="false"
+          @selection-change="handleSelectionChange"
+          @sort-change='sortChange'
       >
-        <template #default="scope">
-          <el-switch
-              v-model="scope.row.deleted"
-              :active-value="0"
-              :inactive-value="1"
-              size="large"
-              class="ml-2"
-              inline-prompt
-              active-text="启用"
-              inactive-text="作废"
-              :before-change="beforeChangeStatus.bind(this, scope.row)"
-              style="--el-switch-on-color: #409EFF; --el-switch-off-color: #ff4949"
-              v-if="user.role.roleKey === 'regular_user'"
-              disabled
-          ></el-switch>
-          <el-switch
-              v-else
-              v-model="scope.row.deleted"
-              :active-value="0"
-              :inactive-value="1"
-              size="large"
-              class="ml-2"
-              inline-prompt
-              active-text="启用"
-              inactive-text="作废"
-              :before-change="beforeChangeStatus.bind(this, scope.row)"
-              style="--el-switch-on-color: #409EFF; --el-switch-off-color: #ff4949"
-          ></el-switch>
-        </template>
-      </el-table-column>
-      <el-table-column label="审批状态">
-        <template #default="scope">
-          <el-button :type="scope.row.approvalStatus === 1 ? 'success' : 'danger'"
-                     :disabled="true"
-                     class="custom-button">
-            {{ scope.row.approvalStatus === 1 ? '已校核' : '未校核' }}
-          </el-button>
-        </template>
-      </el-table-column>
-      <el-table-column prop="createTime" label="创建时间" sortable show-overflow-tooltip/>
-      <el-table-column prop="updateTime" label="更新时间" sortable  show-overflow-tooltip/>
-      <el-table-column fixed="right" label="操作" width="220">
-        <template #default="scope">
-          <div class="btn-group">
-            <div class="col">
-              <el-button size="small" color="#67C23A" style="color: white" @click="previewFile(scope.row)"
-              >预览
-              </el-button
-              >
-              <!--//单个文件更新功能现只对管理员开放-->
-              <el-button size="small" color="#3BA6C4"  v-if="user.role.roleKey === 'superuser'" @click="updateVersion(scope.row)"
-              >更新
-              </el-button
-              >
-              <el-popconfirm title="你确定要删除吗，删除之后数据将无法恢复?"
-                             @confirm="handleDelete(scope.row.id,scope.row.documentPath,scope.row.createTime)"
-                             v-if="user.role.roleKey === 'superuser' || user.role.roleKey === 'department_admin' || user.role.roleKey === 'designer'">
-                <template #reference>
-                  <el-button color="#f56c6c" style="color: white" size="small" >删除</el-button>
-                </template>
-              </el-popconfirm>
+        <el-table-column type="selection" width="55"/>
+        <el-table-column prop="id" label="ID"  />
+        <el-table-column prop="itemNo" label="项目编号" width="100"/>
+        <el-table-column prop="materialNo" label="料号" width="100"/>
+        <el-table-column prop="documentName" label="文件名称" show-overflow-tooltip/>
+        <el-table-column prop="documentType" label="文件类型" show-overflow-tooltip>
+          <template #default="scope">
+            {{ getDocumentType(scope.row.documentType) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="sequenceNo" label="文件序号" show-overflow-tooltip/>
+        <el-table-column prop="documentVersion" label="文件版本" show-overflow-tooltip/>
+        <el-table-column prop="user.nickName" label="创建人" show-overflow-tooltip/>
+        <el-table-column prop="substitution.nickName" label="变更人" show-overflow-tooltip/>
+        <el-table-column prop="documentPath" label="文件路径" :min-width="200" show-overflow-tooltip :ellipsis="true"
+                         style="white-space: nowrap; word-break: break-all;"/>
+
+        <el-table-column
+            prop="deleted"
+            label="是否启用"
+            align="center"
+            sortable="custom"
+            show-overflow-tooltip
+        >
+          <template #default="scope">
+            <el-switch
+                :model-value="scope.row.deleted"
+                :active-value="0"
+                :inactive-value="1"
+                size="large"
+                class="ml-2"
+                inline-prompt
+                active-text="启用"
+                inactive-text="作废"
+                :before-change="beforeChangeStatus.bind(this, scope.row)"
+                style="--el-switch-on-color: #409EFF; --el-switch-off-color: #ff4949"
+                v-if="user.role.roleKey === 'regular_user'"
+                disabled
+            ></el-switch>
+            <el-switch
+                v-else
+                :model-value="scope.row.deleted"
+                :active-value="0"
+                :inactive-value="1"
+                size="large"
+                class="ml-2"
+                inline-prompt
+                active-text="启用"
+                inactive-text="作废"
+                @change="obsoleteChange(scope.row)"
+                :before-change="beforeChangeStatus.bind(this, scope.row)"
+                style="--el-switch-on-color: #409EFF; --el-switch-off-color: #ff4949"
+            ></el-switch>
+          </template>
+        </el-table-column>
+        <el-table-column label="审批状态">
+          <template #default="scope">
+            <el-button :type="scope.row.approvalStatus === 1 ? 'success' : 'danger'"
+                       :disabled="true"
+                       class="custom-button">
+              {{ scope.row.approvalStatus === 1 ? '已校核' : '未校核' }}
+            </el-button>
+          </template>
+        </el-table-column>
+        <el-table-column label="发布状态">
+          <template #default="scope">
+            <el-button :type="scope.row.publishStatus === 1 ? 'success' : 'danger'"
+                       :disabled="true"
+                       class="custom-button">
+              {{ scope.row.publishStatus === 1 ? '已发布' : '未发布' }}
+            </el-button>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="创建时间" sortable="custom" show-overflow-tooltip/>
+        <el-table-column prop="updateTime" label="更新时间" sortable="custom"  show-overflow-tooltip/>
+        <el-table-column prop="approvalTime" label="审批时间"  sortable="custom" show-overflow-tooltip/>
+        <el-table-column prop="publishTime" label="下发时间"  sortable="custom" show-overflow-tooltip/>
+          <el-table-column prop="comment" label="源文件名"  sortable="custom" show-overflow-tooltip/>
+        <el-table-column fixed="right" label="操作" width="220">
+          <template #default="scope">
+            <div class="btn-group">
+              <div class="col">
+                <el-button size="small" color="#67C23A" style="color: white" @click="previewFile(scope.row)"
+                >预览
+                </el-button
+                >
+                <!--//单个文件更新功能现只对管理员开放-->
+                <el-button size="small" color="#3BA6C4"  v-if="user.role.roleKey === 'superuser'" @click="updateVersion(scope.row)"
+                >更新
+                </el-button
+                >
+                <el-button size="small" color="#3BA6C4"
+                           v-if="user.role.roleKey === 'superuser' || user.role.roleKey === 'department_admin' || user.role.roleKey === 'designer'"
+                           @click="editVersion(scope.row)"
+                >修改
+                </el-button
+                >
+                <el-button size="small" color="#3BA6C4"
+                           v-if="user.role.roleKey === 'superuser' || user.role.roleKey === 'department_admin' || user.role.roleKey === 'designer'"
+                           @click="handleGetZipFileList(scope.row)"
+                >作废
+                </el-button
+                >
+                <el-popconfirm title="你确定要删除吗，删除之后数据将无法恢复?"
+                               @confirm="handleDelete(scope.row.id,scope.row.documentPath,scope.row.createTime)"
+                               v-if="user.role.roleKey === 'superuser' || user.role.roleKey === 'department_admin' || user.role.roleKey === 'designer'">
+                  <template #reference>
+                    <el-button color="#f56c6c" style="color: white" size="small" >删除</el-button>
+                  </template>
+                </el-popconfirm>
+                <el-popconfirm title="你确定要加急发布，开放之后非设计人员可直接获取?"
+                               @confirm="handlePublish(scope.row)"
+                               v-if="user.role.roleKey === 'superuser' || user.role.roleKey === 'department_admin' || user.role.roleKey === 'designer'">
+                  <template #reference>
+                    <el-button color="#67C23A" style="color: white" size="small" >发布</el-button>
+                  </template>
+                </el-popconfirm>
+              </div>
+              <div class="col">
+                <el-button size="small" color="#409EFF" style="color: white" @click="downloadFile(scope.row)">下载</el-button>
+                <el-button size="small" color="#909399" style="color: white" @click="showHistory(scope.row)">历史</el-button>
+                <el-popconfirm title="对文件校核后将自动通过，确定校核?"
+                               @confirm="handVerify(scope.row)"
+                               v-if="user.role.roleKey === 'superuser' || user.role.roleKey === 'department_admin'">
+                  <template #reference>
+                    <el-button color="#3773EA" style="color: white" size="small" >校核</el-button>
+                  </template>
+                </el-popconfirm>
+              </div>
             </div>
-            <div class="col">
-              <el-button size="small" color="#409EFF" style="color: white" @click="downloadFile(scope.row)">下载</el-button>
-              <el-button size="small" color="#909399" style="color: white" @click="showHistory(scope.row)">历史</el-button>
-              <el-popconfirm title="对文件校核后将自动通过，确定校核?"
-                             @confirm="handVerify(scope.row)"
-                             v-if="user.role.roleKey === 'superuser' || user.role.roleKey === 'department_admin'">
-                <template #reference>
-                  <el-button color="#3773EA" style="color: white" size="small" >校核</el-button>
-                </template>
-              </el-popconfirm>
-            </div>
-          </div>
-        </template>
-      </el-table-column>
-    </el-table>
+          </template>
+        </el-table-column>
+      </el-table>
+      </el-scrollbar>
+    </div>
     <!--分页条-->
     <div style="margin: 10px ; padding: 0px">
       <el-pagination
           v-model:current-page="currentPage"
           v-model:page-size="pageSize"
-          :page-sizes="[5, 10, 20, 40]"
+          :page-sizes="[5, 10, 20, 40,300,600]"
           layout="total, sizes, prev, pager, next, jumper"
           :total="total"
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
       />
     </div>
+
     <!--  新增对话框 -->
     <el-dialog v-model="dialogVisible" title="Tips" width="50%" :before-close="handleCloseDialog">
       <el-form :model="form" label-width="120px">
@@ -255,7 +324,7 @@
       </span>
       </template>
     </el-dialog>
-    <!--  新增对话框多选 -->
+    <!--  多选新增对话框多选 -->
     <el-dialog v-model="dialogVisibleM" title="Tips" width="50%" :before-close="handleCloseMDialog">
       <el-form :model="form" label-width="120px">
         <el-form-item label="项目编号">
@@ -348,6 +417,7 @@
       </template>
     </el-dialog>
 
+
     <!--  更新文件对话框 -->
     <el-dialog v-model="updatedDialogVisible" title="Tips" width="50%" :before-close="handleCloseUpdateDialog">
       <el-form :model="form" label-width="120px">
@@ -381,6 +451,143 @@
       </template>
     </el-dialog>
 
+    <!--  修改文件对话框 -->
+    <el-dialog v-model="editDialogVisible" title="修改压缩包内的文件（可多选）" width="50%" :before-close="handleCloseEditMDialog">
+      <el-form :model="form" label-width="120px">
+        <el-form-item label="选择文件">
+          <el-upload ref="updateDocument"
+                     drag
+                     class="upload-demo"
+                     style="display: inline"
+                     :auto-upload="false"
+                     :on-change="handleEditFileChange"
+                     :file-list="fileListEdit"
+                     :multiple="true"
+                     action="#">
+            <el-icon class="el-icon--upload" ><upload-filled /></el-icon>
+            <div class="el-upload__text" >
+              拖拽文件或 <em>点击上传</em>
+            </div>
+            <template #tip>
+              <div class="el-upload__tip">
+                <span style="font-weight: bold; color: lightslategrey; font-family: 'Arial'">请选择要替换的文件和变更单，且单文件大小限制在50MB以内</span>
+              </div>
+            </template>
+            <!--<template #trigger>-->
+            <!--  <el-button type="primary">选择文件</el-button>-->
+            <!--</template>-->
+            <!--<template #tip>-->
+            <!--  <div class="el-upload__tip">-->
+            <!--    <span style="font-weight: bold; color: red; font-family: 'Arial'">请选择要替换的文件和变更单，且单文件大小限制在50MB以内</span>-->
+            <!--  </div>-->
+            <!--</template>-->
+          </el-upload>
+        </el-form-item>
+        <el-form-item label="上传文件">
+          <el-button  type="primary" @click="handleEditFile">点击上传</el-button>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+      <span class="dialog-footer">
+        <el-button type="primary" @click="closeEditM">
+          关闭
+        </el-button>
+      </span>
+      </template>
+    </el-dialog>
+
+    <!--  删除文件夹中的单文件对话框 -->
+    <el-dialog v-model="deleteFromZipDialogVisible" title="作废压缩包中文件" width="30%" :before-close="closeOneFileDeleteDialog">
+
+      <div class="tree-upload-container">
+        <el-space direction="vertical">
+
+          <div class="upload-container">
+            <!--//上传变更单附件-->
+            <el-form :model="form" label-width="150px">
+              <el-form-item label="第一步">
+                <div class="tree-container">
+                  <b>选择作废文件</b>
+                  <el-tree
+                      :data="allFilesPaths"
+                      show-checkbox
+                      default-expand-all
+                      node-key="id"
+                      ref="tree"
+                      highlight-current
+                      @check-change="handleCheckChange"
+                      :props="defaultProps">
+                  </el-tree>
+                </div>
+              </el-form-item>
+              <el-form-item label="第二步" :class="{ 'upload-disabled': !isTreeChecked }">
+                <el-upload ref="upload"
+                           drag
+                           :auto-upload="false"
+                           :http-request="uploadCNFile"
+                           :disabled="!isTreeChecked"
+                           :limit="1"
+                           :on-exceed="handleExceed"
+                           @change="handleFileChange"
+
+                >
+                  <el-icon class="el-icon--upload" :style="{ color: isTreeChecked ? '' : '#888' }"><upload-filled /></el-icon>
+                  <div class="el-upload__text" :style="{ color: isTreeChecked ? '' : '#888' }">
+                    拖拽文件或 <em>点击上传</em>
+                  </div>
+                  <template #tip>
+                    <div class="el-upload__tip">
+                      文件大小限制在50MB以内
+                    </div>
+                  </template>
+                  <!--<template #trigger>-->
+                  <!--  <el-button type="primary"  @click="handleUploadButtonClick">选择变更单文件</el-button>-->
+                  <!--</template>-->
+                  <!--<template #tip>-->
+                  <!--  <div class="el-upload__tip">-->
+                  <!--    文件大小限制在50MB以内-->
+                  <!--  </div>-->
+                  <!--</template>-->
+
+                </el-upload>
+
+              </el-form-item>
+              <el-form-item >
+                <div v-if="!isTreeChecked" class="upload-tip">
+                  请先完成第一步选择要作废的文件
+                </div>
+              </el-form-item>
+              <el-form-item >
+                <div v-if="showUploadTip" class="upload-tip">
+                  还未选择作废的文件
+                </div>
+              </el-form-item>
+              <el-form-item label="第三步">
+                <div>
+                  <el-button type="primary" @click="handleBeforeUpload">上传变更单文件</el-button>
+                </div>
+              </el-form-item>
+              <el-form-item >
+                <div v-if="showNoUploadCNFile" class="upload-tip">
+                  还未上传变更通知单
+                </div>
+              </el-form-item>
+            </el-form>
+          </div>
+        </el-space>
+      </div>
+      <template #footer>
+      <span class="dialog-footer">
+        <div slot="footer" class="dialog-footer">
+          <el-button @click="closeOneFileDeleteDialog()">取消</el-button>
+          <el-button type="danger" @click="deleteOneFileFromZip()">作废</el-button>
+        </div>
+      </span>
+      </template>
+
+    </el-dialog>
+
+
     <!--查看历史版本对话框-->
     <el-dialog v-model="historyDialogVisible" title="历史版本" width="80%" :close-on-click-modal="false"
                :before-close="handleDialogHisClose">
@@ -404,12 +611,57 @@
         </el-table-column>
         <el-table-column prop="sequenceNo" label="文件序号" show-overflow-tooltip/>
         <el-table-column prop="documentVersion" label="文件版本" show-overflow-tooltip/>
+
+        <el-table-column
+            prop="deleted"
+            label="是否启用"
+            align="center"
+            sortable
+            show-overflow-tooltip
+        >
+          <template #default="scope">
+            <el-switch
+                :model-value="scope.row.deleted"
+                :active-value="0"
+                :inactive-value="1"
+                size="large"
+                class="ml-2"
+                inline-prompt
+                active-text="启用"
+                inactive-text="作废"
+                :before-change="beforeChangeStatus.bind(this, scope.row)"
+                style="--el-switch-on-color: #409EFF; --el-switch-off-color: #ff4949"
+                disabled
+            ></el-switch>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="审批状态">
+          <template #default="scope">
+            <el-button :type="scope.row.approvalStatus === 1 ? 'success' : 'danger'"
+                       :disabled="true"
+                       class="custom-button">
+              {{ scope.row.approvalStatus === 1 ? '已校核' : '未校核' }}
+            </el-button>
+          </template>
+        </el-table-column>
+        <el-table-column label="发布状态">
+          <template #default="scope">
+            <el-button :type="scope.row.publishStatus === 1 ? 'success' : 'danger'"
+                       :disabled="true"
+                       class="custom-button">
+              {{ scope.row.publishStatus === 1 ? '已发布' : '未发布' }}
+            </el-button>
+          </template>
+        </el-table-column>
         <el-table-column prop="documentPath" label="文件路径" show-overflow-tooltip/>
         <el-table-column prop="user.username" label="创建人" show-overflow-tooltip/>
         <el-table-column prop="substitution.username" label="变更人" show-overflow-tooltip/>
         <el-table-column prop="createTime" label="创建时间" show-overflow-tooltip/>
         <el-table-column prop="updateTime" label="更新时间" show-overflow-tooltip/>
-        <el-table-column fixed="right" label="操作" width="220">
+        <el-table-column prop="approvalTime" label="审批时间" sortable  show-overflow-tooltip/>
+        <el-table-column prop="publishTime" label="开放时间" sortable  show-overflow-tooltip/>
+        <el-table-column fixed="right" label="操作" width="240">
           <template #default="scope">
             <div class="btn-group">
               <div class="col">
@@ -422,7 +674,7 @@
               <div class="col">
                 <el-popconfirm title="你确定要删除吗，删除之后数据将无法恢复?"
                                @confirm="handleDelete(scope.row.id,scope.row.documentPath)"
-                               v-if="user.role.roleKey === 'superuser' || user.role.roleKey === 'department_admin' || user.role.roleKey === 'designer'">
+                               v-if="user.role.roleKey === 'superuser'">
                   <template #reference>
                     <el-button type="danger" size="small" >删除</el-button>
                   </template>
@@ -520,13 +772,16 @@ import {RefreshLeft, Search} from '@element-plus/icons-vue';
 
 import request from "@/utils/request";
 import {ElMessage} from "element-plus";
+import { ElNotification } from 'element-plus'
 import * as XLSX from 'xlsx';
+
 import * as FileSaver from 'file-saver';
 import {Base64} from "js-base64";
 import axios from "axios";
 import {ref} from "vue";
 import JSZip from 'jszip'
-
+import { reactive } from 'vue';
+import { h } from 'vue'
 import moment from 'moment'
 let upload = ref();
 let updateDocument = ref();
@@ -536,16 +791,59 @@ export default {
   components: {},
   data() {
     return {
+
+      proptype: "",//存放column.prop的字符串值
+
+
       previewUrl: '',
       form: {
       },
+      deleteOneFileform: {
+      },
       fileList: [],
+      //修改单文件时 判断是否选中了有效的变更通知单的标志
+      isCNCorrectSelected:false,
+      //修改单文件时 判断是否选中了变更通知单的标志
+      isCNSelected:false,
+
+      editFileCNsequenceNo:-1,
+
+      //单文件更新的上传的文件列表
+      fileListEdit: [],
+      editSuccessFlag:true,
+
+      allFilesPaths: [],
+      defaultProps: {
+        children: 'subFilePath',
+        label: 'filepath'
+      },
+      isTreeChecked:false, // 默认是没有节点被选中的
+      showUploadTip: false, // 控制是否显示提示信息
       historyForm: {},
       loading: false,
       previewForm: {},
       //搜索栏表单
-      daterange: '',
+      createTimeDaterange: '',
+      publishTimeDaterange:'',
       shortcuts: [
+        {
+          text: '最近一天',
+          value: () => {
+            const end = new Date();
+            const start = new Date();
+            start.setTime(start.getTime() - 3600 * 1000 * 24);
+            return [start, end];
+          },
+        },
+        {
+          text: '最近两天',
+          value: () => {
+            const end = new Date();
+            const start = new Date();
+            start.setTime(start.getTime() - 3600 * 1000 * 24 * 2);
+            return [start, end];
+          },
+        },
         {
           text: '最近一周',
           value: () => {
@@ -574,9 +872,16 @@ export default {
           },
         },
       ],
-      formInline: {},
+      formInline: {
+        sortby:'',
+        order:''
+      },
       //搜索栏搜索用户输入框内容
       userInputValue:'',
+
+      //搜索栏搜索事业部输入框内容
+      superDepartInputValue:'',
+
       //ItemMaster搜索表单栏
       ItemFormInline: {},
       search: '',
@@ -618,9 +923,16 @@ export default {
       //查看历史版本对话框显示控制
       historyDialogVisible: false,
 
+      //删除单文件对话框显示控制
+      deleteFromZipDialogVisible:false,
+      deleteOneFileForm: {},
+
       //控制新增信息时候得料号选择表格弹出
       itemCodeSelectDialogVisable:false,
       fileData: '', // 表单数据+文件
+
+      handleDeleleData: '', // 表单数据
+
       EditData: '',//编辑更新数据 新数据行+编辑行
       // importData:form,
       // headers:{
@@ -636,10 +948,20 @@ export default {
       itemMasterTableData: [],
 
 
+      //修改压缩包中的文件的时候 验证是否已经上传了变更通知单的标志
+      IsUploadCNFileFlag:false,
+      showNoUploadCNFile:false,
       ids: [],
       selectedFiles: [],
+      // 全局刷新标志
+      allLoad:false,
       // filesUploadUrl:"http://" + window.server.filesUploadUrl + ":9090/files/uploadDrawingFiles"
     }
+  },
+  mounted() {
+    this.$nextTick(() => {
+      this.isTreeReady = true; // 将标志位置为true
+    });
   },
   created() {
 
@@ -653,6 +975,8 @@ export default {
         }
       })
     });
+    //页面刷新的时候 重置搜索表单的条件
+    this.allLoad = true;
     this.load()
   },
   computed: {
@@ -667,9 +991,35 @@ export default {
 
   },
   methods: {
+
+    sortChange(column) {
+      //打印看看参数有哪些？
+
+      console.log("排序", column.prop, column.order);
+      this.currentPage = 1; // 排序后返回第一页
+      if (column.order === 'descending') {
+        this.formInline.sortby = column.prop
+        this.formInline.order = 'desc'
+      } else {
+        this.formInline.sortby = column.prop
+        this.formInline.order = 'asc'
+      }
+      this.load();
+
+
+    },
+
+
+
+
     handleUserSelect(item){
       console.log("item.value"+item.value)  // 获取选中项的 value 值
       this.formInline.userId = item.value  // 将选中项的 value 赋值给其它变量
+    },
+    //事业部搜索输入框
+    handleSuperDepartSelect(item){
+      console.log("item.value"+item.value)  // 获取选中项的 value 值
+      this.formInline.departId = item.value  // 将选中项的 value 赋值给其它变量
     },
     async queryUserSearchAsync(queryString, cb) {
       try {
@@ -679,6 +1029,23 @@ export default {
           console.log(res);
           // 将查询结果作为选项返回给组件
           this.options = res.data.map(item => ({ value: item.id, label: item.nickName }))
+          console.log("this.options:" + JSON.stringify(this.options) )
+          cb(this.options)
+        })
+
+      } catch (error) {
+        console.error(error)
+        cb([])
+      }
+    },
+    async querySuperDepartSearchAsync(queryString, cb) {
+      try {
+        console.log("this.superDepartInputValue:" + this.superDepartInputValue)
+        request.post("/depart/findSuperDepartByNameList",JSON.stringify(this.superDepartInputValue)
+        ).then(res => {
+          console.log(res);
+          // 将查询结果作为选项返回给组件
+          this.options = res.data.map(item => ({ value: item.id, label: item.name }))
           console.log("this.options:" + JSON.stringify(this.options) )
           cb(this.options)
         })
@@ -911,6 +1278,319 @@ export default {
       console.error(error)
     }
     },
+    //单文件更新文件版本按钮
+    async editVersion(row) {
+
+      this.form = JSON.parse(JSON.stringify(row));
+      // console.log("document:" + string);
+      try {
+        const res =  await request.post("/document/publishconfirm",this.form)
+        if (res.code === '0') {
+          try {
+            this.editDialogVisible = true;
+            this.$nextTick(() => {
+              this.$refs["updateDocument"].clearFiles();
+            })
+          }catch (error){
+            console.error(error)
+          }
+        }else{
+          ElMessage({
+            message: res.msg,
+            type: 'error',
+
+          })
+        }
+      }catch (error){
+        console.error(error)
+      }
+
+
+
+
+
+    },
+    //点击获取压缩文件内的文件列表
+    async handleGetZipFileList(row){
+
+      this.form = JSON.parse(JSON.stringify(row));
+      let handleDeleleData = new FormData();
+      let string = JSON.stringify(this.form);
+      handleDeleleData.append('document', string);
+      // console.log("document:" + string);
+      try {
+        const res =  await request.post("/document/publishconfirm",this.form)
+        if (res.code === '0') {
+            try {
+              const response = await axios.request({
+                method: 'post',
+                url: 'http://' + window.server.filesUploadUrl + ':9090/files/getDocumentList',
+                headers: {
+                  'Content-Type': 'multipart/form-data',
+                  'token': JSON.parse(sessionStorage.getItem('token'))
+                },
+                data: handleDeleleData
+              });
+              if (response.data.code === '0') {
+                this.allFilesPaths = response.data.data
+                //每次打开页面的时候重置这个未选择树形结构内容的提示标志
+                this.showUploadTip = false;
+                // this.allFilesPaths=response.data;
+                this.deleteFromZipDialogVisible = true;
+                this.$nextTick(() => {
+                  this.$refs["upload"].clearFiles();
+                })
+                console.log("this.allFilesPaths:"+this.allFilesPaths);
+              }else{
+                ElMessage({
+                  message: response.data.msg,
+                  type: 'warning',
+                })
+              }
+            }catch (error){
+              console.error(error)
+            }
+          }else{
+            ElMessage({
+              message: res.msg,
+              type: 'error',
+
+            })
+          }
+        }catch (error){
+        console.error(error)
+      }
+
+    },
+    handleCheckChange() {
+      const checkedKeys = this.$refs.tree.getCheckedKeys();
+      this.isTreeChecked = checkedKeys.length > 0;
+    },
+    handleUploadButtonClick(fileList) {
+      this.showUploadTip = !this.isTreeChecked; // 只有当树节点未被选中才显示提示信息
+    },
+    //设置角色权限
+    async deleteOneFileFromZip(){
+      if (!this.isTreeChecked) {
+        this.showUploadTip = true; // 显示提示信息
+        return;
+      }
+      //点击作废的时候如果没有上传CN文件 则提示
+      if (!this.IsUploadCNFileFlag) {
+        this.showNoUploadCNFile = true; // 显示提示信息
+        return;
+      }
+
+      //此处首先执行的是插入变更通知单的操作
+      // 则可以进行插入变更通知单的操作（更改变更通知单的名字）
+      //变更通知单的版本是A01 变更通知单的文件类型是4
+      console.log("上传完变更单之前的form"+JSON.stringify(this.form))
+      let form1 = Object.assign({}, this.form);
+      form1.documentVersion = "A01";
+      //把插入的form的文件类型设置为变更通知单
+      form1.documentType = 4;
+      form1.sequenceNo = this.deleteOneFileForm.sequenceNo;
+      //在变更通知单上传的时候 把文件路径存在了this.oldFilePath
+      form1.documentPath = this.oldFilePath;
+      //这里需要处理掉form中的id
+      let res1 = await request.post("/document/insert", form1);
+      console.log("进入新增");
+      if (res1.code === '0') {
+
+        console.log("变更通知单插入成功")
+        ElMessage({
+          message: "变更通知单记录导入成功",
+          type: 'success',
+        })
+        //如果变更通知单插入成功 则开始对压缩包中的文件进行删除
+        const checkedNodes = this.$refs.tree.getCheckedNodes(); // 获取选中节点的完整对象数组
+        const filePaths = checkedNodes.map(node => node.filepath); // 提取节点对象中的 filepath 属性值
+        console.log(filePaths); // 打印 filepath 属性值数组
+        //将数组转换成字符串
+        let fileListStr=""
+        for (let i=0;i<filePaths.length;i++){
+          fileListStr+=filePaths[i]+",";
+        }
+        fileListStr.substr(0,fileListStr.length-1);
+        console.log("fileListStr:" + fileListStr)
+        let handleDeleleData = new FormData();
+        //此处用的this.form来自于打开删除单文件页面的时候获取的
+        let string = JSON.stringify(this.form);
+        console.log("上传完变更单之后得form"+string)
+        handleDeleleData.append('document', string);
+        handleDeleleData.append('fileListStr', fileListStr);
+        console.log("document:" + string);
+        //把行信息和文件名列表转换的字符串 都传到后端
+        const response = await axios.request({
+          method: 'post',
+          url: 'http://' + window.server.filesUploadUrl + ':9090/files/deleteOneFileFromZip',
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'token': JSON.parse(sessionStorage.getItem('token'))
+          },
+          data: handleDeleleData
+        });
+        //删除文件如果成功了
+        if (response.data.code === '0') {
+
+          // 如果有文件更新成功了，则更新文件路径和版本信息
+          //此时的form还是选中的文件的记录的form
+          this.form.documentPath = response.data.data.filePath;
+          this.form.documentVersion = response.data.data.newVersion;
+
+
+          //文件删除成功之后要插入两条数据 一是新的版本的文件的记录 二是变更通知单的记录
+          this.form.id =
+          //更新文件的时候 文件路径更新 文件版本更新 更新人id更新 更新时间更新 其他信息不更新
+          console.log("this.form:" +  JSON.stringify(this.form))
+          //在这里更新文件之前要先把id清掉 因为这里的id是被更改的记录的id
+          let res = await request.post("/document/updateM", this.form);
+          console.log("进入新增");
+          if (res.code === '0') {
+            ElMessage({
+              message: "更新记录导入成功",
+              type: 'success',
+            })
+
+          } else {
+
+            ElMessage({
+              message: "文件记录更新失败 请手动删除变更单后，重新打开页面进行删除",
+              type: 'error',
+            })
+            console.log("this.form" + this.form);
+            //如果新增失败 需要发起删除掉上传到文件服务器的文件
+            console.log(this.oldFilePath)
+            this.del_file(this.form.documentPath)
+          }
+
+        }else{
+          //如果文件删除失败了 则不执行插入文件记录 而是要把变更通知单删除掉
+          ElMessage({
+            message: "文件删除失败 请手动删除变更单后，重新打开页面进行删除",
+            type: 'error',
+          })
+        }
+
+      } else {
+        console.log("变更通知单插入失败")
+        ElMessage({
+          message: "变更通知单导入失败，请重新上传",
+          type: 'error',
+        })
+        console.log("this.form" + this.form);
+        //   如果新增失败 需要发起删除掉上传到文件服务器的文件
+        this.del_file(this.form.documentPath)
+      }
+
+
+      this.deleteFromZipDialogVisible=false;
+      this.load();
+    },
+
+    closeOneFileDeleteDialog(){
+      this.deleteFromZipDialogVisible  = false;//关闭弹窗
+      this.load();
+    },
+    handleExceed(files, uploadFiles) {
+      ElMessage({
+        message: `上传文件的数量不能超过1个，当前选择了 ${files.length} 个文件，总共选择了 ${files.length + uploadFiles.length} 个文件`,
+        type: 'error',
+      })
+      this.$message.warning(``);
+    },
+    async handleFileChange(file) {
+      // 获取选中的文件对象
+      const selectedFile = file.raw;
+      // 处理文件名
+      const fileName = selectedFile.name;
+      console.log(fileName)
+
+      this.deleteOneFileForm = Object.assign({}, this.form);
+
+      // 判断文件名中是否包含字符串
+      if (fileName.indexOf('变更单') !== -1 || fileName.indexOf('变更通知单') !== -1) {
+        this.deleteOneFileForm.documentType = 4;
+        // 使用正则表达式匹配文件名中的数字
+        const regex = /_(\d+)\./;
+        const matches = fileName.match(regex);
+        if (matches && matches.length > 1) {
+          // 匹配成功，获取到数字，并根据数字设置 this.form.documentType 和 this.form.sequenceNo 的值
+          this.deleteOneFileForm.sequenceNo = parseInt(matches[1]);
+
+          //先默认form中的版本号为A01 用insert
+          this.deleteOneFileForm.documentVersion = "A01";
+          let res = await request.post("/document/confirm", this.deleteOneFileForm);
+
+          if (res.code === '0') {
+            console.log("重复验证通过");
+
+          } else {
+            this.isCNSelected = true;
+            console.log("重复验证未通过");
+            // 不满足条件，继续循环
+            ElMessage({
+              message: '变更单记录导入失败',
+              type: 'error',
+            })
+            // 如果文件名不包含"变更"字符串，清除选中的文件
+            this.$refs.upload.clearFiles();
+          }
+
+        }else{
+          console.log("序号错误");
+          ElMessage({
+            message: '变更单序号错误',
+            type: 'error',
+          })
+          // 如果文件名不包含"变更"字符串，清除选中的文件
+          this.$refs.upload.clearFiles();
+        }
+      }else{
+        console.log("名称错误");
+        ElMessage({
+          message: '变更单名称错误',
+          type: 'error',
+        })
+        // 如果文件名不包含"变更"字符串，清除选中的文件
+        this.$refs.upload.clearFiles();
+      }
+
+
+      // 进行其他操作...
+    },
+    //此处为上传变更单的函数 因为现在变更单是不存在更新版本的情况 所以所有的变更单都是新增插入 上传完文件之后 并未执行数据库插入和改名 等到真正作废的时候再改名
+    uploadCNFile(params) {
+      let form1 = reactive({ ...this.form });
+      form1.documentType = 4;
+      console.log("上传处理的form"+JSON.stringify(this.form))
+      this.fileData = new FormData()
+      let string = JSON.stringify(form1)
+      this.fileData.append('document', string)
+      this.fileData.append("file", params.file) // append增加数据
+      axios.request({
+        method: 'post',
+        url: 'http://' + window.server.filesUploadUrl + ':9090/files/uploadDocumentFiles',
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'token': JSON.parse(sessionStorage.getItem('token'))
+        },
+        data: this.fileData
+      }).then(response => {
+        let res = response.data;
+        if (res.code === '0') {
+          ElMessage({
+            message: '上传成功',
+            type: 'success',
+          })
+          //如果是新增的文件 则默认其版本为A01
+          this.form.documentVersion = "A01";
+          this.form.documentPath = res.data;
+          this.oldFilePath = this.form.documentPath;
+        }
+      }).catch(() => {
+      })
+    },
 
     handleDialogHisClose() {
       this.historyTableData = [];
@@ -936,6 +1616,10 @@ export default {
     handleCloseMDialog(){
       this.closeM();
     },
+    handleCloseEditMDialog(){
+      this.closeEditM();
+    },
+
     handleCloseUpdateMDialog(){
       this.closeupdatedDialog();
     },
@@ -963,9 +1647,339 @@ export default {
           // 从返回结果中获取filePath和newVersion
           this.form.documentVersion = res.data.newVersion;
           this.form.documentPath = res.data.filePath;
+          this.form.comment = params.file.name;
         }
       }).catch(() => {
       })
+    },
+    async handleEditFile() {
+      console.log(this.isCNCorrectSelected)
+      //先执行一下这个函数
+      await this.beforeUpload();
+      if (this.isCNCorrectSelected) {
+        console.log("开始进入文件编辑")
+        this.editFile();
+      }else{
+        //这里有两种情况 第一种情况是用户没有上传变更通知单 第二种情况是用户上传了变更通知单 但是名称有问题
+        console.log("是否有选CN" + this.isCNSelected)
+        if(this.isCNSelected){
+          ElMessage({
+            message: '请检查变更通知单文件是否已存在',
+            type: 'error',
+          })
+        }else{
+          ElMessage({
+            message: '至少选择两个文件，其中包含一个变更通知单',
+            type: 'error',
+          })
+        }
+
+      }
+    },
+    async beforeUpload() {
+      //每一次上传的时候 初始化数据
+      this.isCNCorrectSelected = false;
+      this.isCNSelected = false;
+      let form1 = reactive({ ...this.form });
+
+
+      console.log("开始进行文件数量的判断:" +       this.fileListEdit.length)
+
+      if (this.fileListEdit.length < 2) {
+        console.log("文件数量少")
+        ElMessage({
+          message: '至少选择两个文件，其中包含一个变更通知单',
+          type: 'error',
+        })
+        //标志 用于表明是否有合法名称的变更通知单被选择
+        this.isCNCorrectSelected = false;
+      } else {
+        if (this.fileListEdit.length > 0){
+          //对选中的文件开始进行处理
+          for (let i = 0; i < this.fileListEdit.length; i++) {
+            let item = this.fileListEdit[i];
+            console.log(item.raw)
+            console.log(this.fileListEdit[0])
+
+            // 获取当前文件名
+            const fileName = item.raw.name;
+            console.log("文件名称：" + fileName);
+            // 判断文件名中是否包含字符串
+            if (fileName.indexOf('变更单') !== -1 || fileName.indexOf('变更通知单') !== -1) {
+              console.log("matches.length");
+              form1.documentType = 4;
+            }else{
+              console.log("名称错误");
+              continue;
+            }
+            // 使用正则表达式匹配文件名中的数字
+            const regex = /_(\d+)\./;
+            const matches = fileName.match(regex);
+            if (matches && matches.length > 1) {
+              // 匹配成功，获取到数字，并根据数字设置 this.form.documentType 和 this.form.sequenceNo 的值
+              form1.sequenceNo = parseInt(matches[1]);
+
+              //此处把文件序号存储一下 因为后面插入记录的时候就可以不用再处理文件名了
+              this.editFileCNsequenceNo = form1.sequenceNo;
+
+            }else{
+              console.log("序号错误");
+              continue;
+            }
+            console.log("this.form:" +  JSON.stringify(form1))
+            //先默认form中的版本号为A01 用insert
+            form1.documentVersion = "A01";
+            let res = await request.post("/document/confirm", form1);
+
+            if (res.code === '0') {
+              console.log("重复验证通过");
+              // 满足条件时结束循环 表示用户已经选择了有效的变更通知单文件
+              this.isCNCorrectSelected = true;
+              break;
+
+            } else {
+              this.isCNSelected = true;
+              console.log("重复验证未通过");
+              // 不满足条件，继续循环
+              continue;
+            }
+
+
+          }
+        }else{
+          ElMessage({
+            message: '至少选择两个文件，其中包含一个变更通知单',
+            type: 'error',
+          })
+        }
+
+      }
+    },
+    async editFile(params) {
+
+      console.log("点击上传")
+      const deleteIndexList = [];
+
+
+      //初始化变更单用数据
+      let form1 = reactive({ ...this.form });
+      let oldFilePath1 = reactive({ ...this.oldFilePath });
+
+
+
+
+      // 定义一个数组，用于保存所有重复导入失败的文件名
+      const failedFiles = [];
+      // 定义一个数组，用于保存所有文件名错误的文件名
+      const ErrNameFiles = [];
+      // 定义一个数组，用于保存所有文件名错误的文件名
+      const successFiles = [];
+
+
+
+      //此处提前加验证 三个验证 文件是否为压缩包 文件是否已经校验和发布
+      const requests = this.fileListEdit.map(async (item) => {
+
+
+        if (item.raw.name.includes("变更通知单")){
+          //首先需要判断是否未变更单文件 如果为变更通知单 要先上传变更通知单
+
+          form1.documentType = 4;
+          //此处的序号来自校验的时候获得的
+          form1.sequenceNo = this.editFileCNsequenceNo;
+          console.log("上传处理的form"+JSON.stringify(this.form))
+          this.fileData = new FormData()
+          let string = JSON.stringify(form1)
+          this.fileData.append('document', string)
+          this.fileData.append("file", item.raw) // append增加数据
+          axios.request({
+            method: 'post',
+            url: 'http://' + window.server.filesUploadUrl + ':9090/files/uploadDocumentFiles',
+            headers: {
+              'Content-Type': 'multipart/form-data',
+              'token': JSON.parse(sessionStorage.getItem('token'))
+            },
+            data: this.fileData
+          }).then(response => {
+            let res = response.data;
+            if (res.code === '0') {
+              item.status = 'success';
+
+              // ElMessage({
+              //   message: '变更通知单开始上传',
+              //   type: 'success',
+              // })
+              ElNotification({
+                title: 'Info',
+                message: "变更通知单开始上传",
+                duration: 3000,
+                type: 'info',
+              })
+              //如果是新增的文件 则默认其版本为A01
+              form1.documentVersion = "A01";
+              form1.documentPath = res.data;
+              oldFilePath1 = form1.documentPath;
+
+              //变更通知单如果上传成功则保留这个变更通知单的名称
+              form1.comment = item.raw.name;
+            }else{
+              ElMessage({
+                message: '变更通知单上传失败',
+                type: 'error',
+              })
+            }
+          }).catch(() => {
+          })
+        }else {
+
+          console.log("开始循环");
+          let fileData = new FormData();
+          let string = JSON.stringify(this.form);
+          fileData.append('document', string);
+          fileData.append('file', item.raw);
+          console.log("document:" + string);
+
+          try {
+            console.log("开始发送请求");
+            const response = await axios.request({
+              method: 'post',
+              url: 'http://' + window.server.filesUploadUrl + ':9090/files/editDocumentFiles',
+              headers: {
+                'Content-Type': 'multipart/form-data',
+                'token': JSON.parse(sessionStorage.getItem('token'))
+              },
+              data: fileData
+            });
+            let res = response.data;
+            if (res.code === '0') {
+              // 设置文件状态为已上传，并在文件名后面加上对号
+              item.status = 'success';
+              // 上传成功之后将成功的文件名加入列表
+              successFiles.push(item.raw.name);
+              // 如果有文件更新成功了，则更新文件路径和版本信息
+              this.form.documentPath = res.data.filePath;
+              this.form.documentVersion = res.data.newVersion;
+              this.oldFilePath = this.form.documentPath;
+
+              // 如果是新增的文件，则默认其版本为A01
+            } else if (res.code === '202') {
+
+              item.status = 'error';
+              this.editSuccessFlag = false;
+              // 如果文件上传失败，将源文件的名称返回给用户以显示失败原因
+              ElMessage({
+                message: "《" +item.raw.name + "》" + "更新失败，" + res.msg  ,
+                type: 'error',
+              });
+
+            } else if (res.code === '201') {
+              item.status = 'error';
+              this.editSuccessFlag = false;
+              console.log("this.editSuccessFlag" + this.editSuccessFlag )
+              // 如果文件上传失败，将源文件的名称返回给用户以显示失败原因
+              // ElMessage({
+              //   message: h('p', null, [
+              //     h('span',  { style: 'color: red' }, item.raw.name + res.msg),
+              //   ]),
+              //   type: 'error',
+              // });
+              ElNotification({
+                title: 'Error',
+                message: item.raw.name + res.msg,
+                type: 'error',
+              })
+            } else {
+              item.status = 'error';
+              this.editSuccessFlag = false;
+              // 如果文件上传失败，将源文件的名称返回给用户以显示失败原因
+              ElMessage({
+                message: "《" + item.raw.name + "》" + res.msg,
+                type: 'error',
+              });
+            }
+          } catch (error) {
+            console.log(error);
+          }
+        }
+
+      });
+
+      // 等待所有请求完成
+      await Promise.all(requests);
+      //如果所有的单文件都更新成功了 才会进行文件的记录变更
+      console.log("this.editSuccessFlag1" + this.editSuccessFlag )
+      if (this.editSuccessFlag === true) {
+        //此处插入文件的记录之前 先插入变更通知单的记录
+
+        console.log("上传完变更单之前的form"+JSON.stringify(this.form))
+        //这里需要处理掉form中的id
+        let res1 = await request.post("/document/insert", form1);
+        console.log("进入新增");
+        if (res1.code === '0') {
+
+          console.log("变更通知单插入成功")
+          ElMessage({
+            message: "变更通知单记录导入成功",
+            type: 'success',
+          })
+        } else {
+          console.log("变更通知单插入失败")
+          ElMessage({
+            message: "变更通知单导入失败，请重新上传",
+            type: 'error',
+          })
+          console.log("this.form" + this.form);
+          //   如果新增失败 需要发起删除掉上传到文件服务器的文件
+          this.del_file(form1.documentPath)
+        }
+
+
+
+
+
+
+
+        //文件版本的信息更新
+        this.form.id =
+        //更新文件的时候 文件路径更新 文件版本更新 更新人id更新 更新时间更新 其他信息不更新
+        console.log("this.form:" +  JSON.stringify(this.form))
+        let res = await request.post("/document/updateM", this.form);
+        console.log("进入新增");
+        if (res.code === '0') {
+        } else {
+          ElMessage({
+            message: "文件记录插入失败,请检查被修改文件是否已审核发布",
+            type: 'error',
+          })
+          console.log("this.form" + this.form);
+          //如果新增失败 需要发起删除掉上传到文件服务器的文件
+          console.log(this.oldFilePath)
+          this.del_file(this.form.documentPath)
+        }
+      } else {
+        //如果文件上传失败 要把源文件的名称返回回来提示一下用户失败原因
+        // ElNotification({
+        //   title: 'Error',
+        //   message: "文件更新失败，正在删除变更通知单，请认真检查后再更新",
+        //   duration: 3000,
+        //   type: 'error',
+        // })
+        ElMessage({
+          message: "文件更新失败，正在删除变更通知单，请认真检查后再更新",
+          type: 'error',
+        })
+        //如果文件修改失败 要把变更单文件删除掉 不然用户会再次上传变更单文件 并且当部分上传成功的时候 因为会报失败 所以把部分成功生成的压缩包也要删除
+        if (JSON.stringify(oldFilePath1) === "{}"){
+          console.log("oldFilePath1" +JSON.stringify(oldFilePath1) );
+        }else{
+          this.del_file(this.form.documentPath)
+          this.del_file(oldFilePath1)
+          //如果上传失败就把文件列表清除掉
+          this.$nextTick(() => {
+            this.$refs["updateDocument"].clearFiles();
+          })
+        }
+      }
     },
 
     handleBeforeUpdate() {
@@ -997,6 +2011,7 @@ export default {
           this.form.documentVersion = "A01";
           this.form.documentPath = res.data;
           this.oldFilePath = this.form.documentPath;
+          this.form.comment = params.file.name;
         }
       }).catch(() => {
       })
@@ -1007,13 +2022,18 @@ export default {
       this.fileList = fileList;
       console.log(fileList)
     },
+    //通过onchanne触发方法获得文件列表
+    handleEditFileChange(file, fileList) {
+      this.fileListEdit = fileList;
+      console.log(fileList)
+    },
+
     obsoleteChange(row){
       console.log("row" + row.deleted);
       this.form = JSON.parse(JSON.stringify(row));
       console.log("this.form.deleted" + this.form.deleted);
-
       try {
-        request.post("/document/updatestatus",this.form
+        request.post("/document/updateDeletedstatus",this.form
         ).then(res => {
           console.log(res);
           if (res.code === '0') {
@@ -1056,6 +2076,14 @@ export default {
 
             if (res.code === '0') {
               //验证身份成功
+              console.log("验证身份成功")
+              if(row.deleted == 0){
+                row.deleted = 1
+              }else{
+                row.deleted = 0
+              }
+
+
               resolve(true)
             }else{
 
@@ -1174,6 +2202,7 @@ export default {
               this.form.documentVersion = "A01";
               this.form.documentPath = res.data;
               this.oldFilePath = this.form.documentPath;
+              this.form.comment = fileName;
 
               //开始执行记录插入及改文件名
               // Convert documentType to an integer before submitting the form
@@ -1300,7 +2329,16 @@ export default {
             //获取上传成功的文件的路径的列表
             let updateFilesName = response.data;
             //直接返回的数据是object类型的数据 需要转换为数据类型的数据
-            let dataArray = updateFilesName["data"];
+            let filePathArray = updateFilesName["data"];
+            // 筛选出原始数据中的文件路径数组
+            let dataArray = filePathArray.filter((value, index) => index % 2 === 0);
+            console.log(dataArray); // ["A", "B", "C"]
+
+            // 筛选出原始数据中的原始文件名数组
+            let commentArray = filePathArray.filter((value, index) => index % 2 === 1);
+            console.log(commentArray); // ["a", "b", "c"]
+
+
             console.log(dataArray.length);
             //根据返回的文件路径去更新数据
             for (let i = 0; i < dataArray.length; i++){
@@ -1363,6 +2401,8 @@ export default {
                 if (this.form.documentType === 4){
                   //变更通知单不存在更新的情况 所以这里要直接设置变更通知单的版本为A01
                   this.form.documentVersion = "A01";
+                  //此处插入原始文件的名称
+                  this.form.comment = commentArray[i];
                   console.log("开始更新");
                   try{
                     const res = await request.post("/document/insert", this.form);
@@ -1391,7 +2431,7 @@ export default {
 
                 }else{
                   try{
-
+                    this.form.comment = commentArray[i];
                     const res = await request.post("/document/updateM", this.form);
                     if (res.code === '0') {
                       ElMessage({
@@ -1467,6 +2507,9 @@ export default {
     },
 
     handleBeforeUpload() {
+      //如果点击了上传按钮 则 上传标志为true 同时未上传的错误提示消失
+      this.IsUploadCNFileFlag = true;
+      this.showNoUploadCNFile = false;
       upload.value.submit()
     },
 
@@ -1484,12 +2527,44 @@ export default {
         createTime: '创建时间',
         updateTime: '更新时间'
       };
+      // 筛选需要的字段
+      const filteredData = this.tableData.map(item => {
+        const newItem = {};
+        for (const key in item) {
+          if (Object.prototype.hasOwnProperty.call(item, key) && mapping[key]) {
+            newItem[key] = item[key];
+          }
+        }
+        return newItem;
+      });
       // 将表格数据中的字段名替换为中文名
-      const data = this.tableData.map(item => {
+      const data = filteredData.map(item => {
         const newItem = {};
         for (const key in item) {
           if (Object.prototype.hasOwnProperty.call(item, key)) {
             newItem[mapping[key] || key] = item[key];
+          }
+        }
+        // 对 documentType 字段进行映射转换
+        if (newItem['文档类型']) {
+          switch (newItem['文档类型']) {
+            case 1:
+              newItem['文档类型'] = '材料清单';
+              break;
+            case 2:
+              newItem['文档类型'] = '装配工艺图';
+              break;
+            case 3:
+              newItem['文档类型'] = '电气接线图';
+              break;
+            case 4:
+              newItem['文档类型'] = '变更通知单';
+              break;
+            case 5:
+              newItem['文档类型'] = '技术交底单';
+              break;
+            default:
+              break;
           }
         }
         return newItem;
@@ -1561,39 +2636,68 @@ export default {
       return new Promise(resolve => setTimeout(resolve, time));
     },
     async load() {
-      console.log("this.daterange" + this.daterange);
-      const [start, end] = this.daterange
-      if (start && end) {
-        this.formInline.createTimeStart = moment(start).format('YYYY-MM-DD HH:mm:ss')
-        this.formInline.createTimeEnd = moment(end).format('YYYY-MM-DD HH:mm:ss')
-      }
-      console.log('this.formInline',JSON.stringify(this.formInline))
-      try {
 
-        this.loading = true; // 显示Loading遮罩
-        //延迟执行
-        await this.delay(1000);
+        if(this.allLoad){
+          this.reset();//全局查询之前先清空查询条件
+        }
+        console.log("this.createTimeDaterange" + this.createTimeDaterange);
+        const [start, end] = this.createTimeDaterange? this.createTimeDaterange : [null, null]; // 添加空值判断
+        if (start && end) {
+          this.formInline.createTimeStart = moment(start).format('YYYY-MM-DD HH:mm:ss')
+          this.formInline.createTimeEnd = moment(end).format('YYYY-MM-DD HH:mm:ss')
+        }
 
-        request.post(`/document/${this.currentPage}/${this.pageSize}`, JSON.parse(JSON.stringify(this.formInline))
-        ).then(res => {
-          console.log(res);
-          this.tableData = res.data.records;
-          this.total = res.data.total;
+        console.log("this.publishTimeDaterange" + this.publishTimeDaterange);
+        const [start1, end1] = this.publishTimeDaterange? this.publishTimeDaterange : [null, null]; // 添加空值判断
+        if (start1 && end1) {
+          this.formInline.publishTimeStart = moment(start1).format('YYYY-MM-DD HH:mm:ss')
+          this.formInline.publishTimeEnd = moment(end1).format('YYYY-MM-DD HH:mm:ss')
+        }
+
+        console.log('this.formInline',JSON.stringify(this.formInline))
+        try {
+
+          this.loading = true; // 显示Loading遮罩
+          //延迟执行
+          await this.delay(1000);
+
+          request.post(`/document/${this.currentPage}/${this.pageSize}`, JSON.parse(JSON.stringify(this.formInline))
+          ).then(res => {
+            console.log(res);
+            this.tableData = res.data.records;
+            this.total = res.data.total;
+            //查询结束后 把这两个条件清空
+            this.formInline.sortby = ''
+            this.formInline.order = ''
 
 
-        })
-      } catch (error) {
-        console.error(error)
-      } finally {
-        this.loading = false; // 隐藏Loading遮罩
-        this.reset();//查询结束后 清空查询条件
-      }
+          })
+        } catch (error) {
+          //查询结束后 把这两个条件清空
+          this.formInline.sortby = ''
+          this.formInline.order = ''
+          console.error(error)
+        } finally {
+          this.loading = false; // 隐藏Loading遮罩
+          //查询结束后 把这两个条件清空
+          this.formInline.sortby = ''
+          this.formInline.order = ''
+          this.allLoad = false
+        }
+
+
 
     },
 
     reset() {
+      this.formInline = {};
       this.ItemFormInline = {};
-      this.$refs["resetformInline"].resetFields();
+      this.createTimeDaterange = '';
+      this.publishTimeDaterange = '';
+      this.$nextTick(()=>{
+        this.$refs["resetformInline"].resetFields();
+      })
+
     },
     add() {
 
@@ -1629,13 +2733,19 @@ export default {
       request.post("/files/delDocumentFile", {delDocumentPath: path}).then(res => {
             console.log(res);
             if (res.code === '0') {
-              ElMessage({
-                message: 'nginx文件同步成功',
-                type: 'success',
+              // ElMessage({
+              //   message: '文件删除已同步',
+              //   type: 'info',
+              // })
+              ElNotification({
+                title: 'Info',
+                message: "文件删除已同步",
+                duration: 3000,
+                type: 'info',
               })
             } else {
               ElMessage({
-                message: 'nginx文件同步失败',
+                message: '文件同步失败',
                 type: 'error',
                 //
               })
@@ -1687,7 +2797,7 @@ export default {
           }
         }
         if (isFormValid) {
-          request.post("/document", this.form).then(res => {
+          request.post("/document/editDocument", this.form).then(res => {
 
             if (res.code === '0') {
               ElMessage({
@@ -1712,6 +2822,38 @@ export default {
       }
       this.updatedDialogVisible = false;//关闭弹窗
     },
+
+    editDocument() {
+      //更新文件版本
+      if (this.form.id) {
+        if (isFormValid) {
+          request.post("/editdocument", this.form).then(res => {
+
+            if (res.code === '0') {
+              ElMessage({
+                message: '更新成功',
+                type: 'success',
+              })
+              this.load();//更新表单数据
+            } else {
+              ElMessage({
+                message: res.msg,
+                type: 'error',
+                //
+              })
+            }
+          });
+        } else {
+          ElMessage({
+            message: `缺少以下字段：${missingFields.join(', ')}`,
+            type: 'warning',
+          })
+        }
+      }
+      this.updatedDialogVisible = false;//关闭弹窗
+    },
+
+
     save() {
       // Convert documentType to an integer before submitting the form
       this.form.documentType = parseInt(this.form.documentType);
@@ -1770,6 +2912,12 @@ export default {
       this.fileList =[];
       this.load();
     },
+    closeEditM(){
+      this.editDialogVisible = false;//关闭弹窗
+      this.fileListEdit =[];
+      this.load();
+    },
+
     closeupdatedDialog(){
       this.updatedDialogVisibleM = false;//关闭弹窗
       this.fileList =[];
@@ -1867,10 +3015,29 @@ export default {
         this.load();
       });
     },
+    handlePublish(row){
 
+      this.form = JSON.parse(JSON.stringify(row));
+      console.log("edit.row:", this.form)
+      // this.oldFilePath =  this.form.drawingPath;
+      request.post(`/document/publish`,this.form).then(res => {
+        console.log(res);
+        if (res.code === '0') {
+          ElMessage({
+            message: '发布成功',
+            type: 'success',
+          })
+        } else {
+          ElMessage({
+            message: res.msg,
+            type: 'error',
+          })
+        }
+        this.load();
+      });
+    },
     handVerify(row) {
       this.form = JSON.parse(JSON.stringify(row));
-      this.form.approvalStatus = 1;
       console.log("edit.row:", this.form)
       // this.oldFilePath =  this.form.drawingPath;
       request.post(`/document/verifyPass`,this.form).then(res => {
@@ -1893,13 +3060,69 @@ export default {
   }
 }
 </script>
-<style>
+<style >
+.tree-container .el-tree-node__content {
+  font-family: "Arial", sans-serif; /* 自定义字体 */
+  font-size: 14px; /* 自定义字体大小 */
+  color: #333; /* 自定义字体颜色 */
+  /* 添加其他样式属性以美化字体 */
+}
+.upload-disabled {
+  background-color: #d3d3d3;
+}
+.upload-disabled .el-upload__text,
+.upload-disabled .el-icon--upload {
+  color: #888;
+  pointer-events: none;
+  opacity: 0.6;
+}
+.upload-tip {
+  color: #f56c6c;
+}
+.upload-tip {
+  color: red;
+  font-weight: bold;
+  font-family: Arial, sans-serif; /* 替换成你想要的字体，例如 Arial */
+  font-size: 16px;
+}
+.el-form-item__label {
+  font-size: 14px; /* 设置字体大小 */
+  color: #333; /* 设置字体颜色 */
+  font-weight: bold; /* 设置字体粗细 */
+  /* 其他样式属性 */
+}
+.tree-upload-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.tree-container,
+.upload-container {
+  height: 100%; /* 让子元素高度铺满容器 */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+.scrollbar-wrap {
+  position: relative;
+  height: 100%;
+}
+.tree-container {
+  margin-bottom: 10px; /* 调整树形控件和上传组件之间的间距 */
+}
+
+.upload-container {
+  margin-top: 10px; /* 调整树形控件和上传组件之间的间距 */
+}
+.dialog-footer {
+  margin-top: 50px;
+}
 .table tbody tr:nth-child(odd) {
-  background-color: #F5F5F5;
+  background-color: #FDF6EC;
 }
 
 .table tbody tr:nth-child(even) {
-  background-color: #8A77A5;
+  background-color: #F0F9EB;
 }
 
 .table .el-table__row {
@@ -1907,11 +3130,11 @@ export default {
 }
 
 .el-table_3_column_12 .cell {
-  background-color: #F5F5F5;
+  background-color: #FDF6EC;
 }
 
 .el-table_3_column_12 .cell.highlight {
-  background-color: #8A77A5;
+  background-color: #F0F9EB;
 }
 
 .radio-group-container {
@@ -1922,4 +3145,5 @@ export default {
   background-color: rgba(0, 0, 0, 0.8); /* 设置按钮背景颜色为深一些的黑色 */
   color: #fff; /* 设置文字颜色为白色 */
 }
+
 </style>

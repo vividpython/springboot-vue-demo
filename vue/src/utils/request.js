@@ -1,6 +1,7 @@
 import axios from 'axios'
 import router from "@/router";
-import {ElMessage} from "element-plus";
+import {ElMessage, ElMessageBox} from "element-plus";
+
 
 const cancelToken = axios.CancelToken;
 const request = axios.create({
@@ -28,7 +29,10 @@ request.interceptors.request.use(config => {
 }, error => {
     return Promise.reject(error)
 });
-let is401Handled = false; // 添加标记，表示是否已经处理过 401 错误
+
+
+// 是否显示重新登录
+export let isRelogin = { show: false };
 // response 拦截器
 // 可以在接口响应后统一处理结果
 request.interceptors.response.use(
@@ -44,27 +48,48 @@ request.interceptors.response.use(
             res = res ? JSON.parse(res) : res
         }
         return res;
-    },
-    error => {
-        if (error.response && error.response.status === 401) {
-            if (is401Handled)
-            {
-                return Promise.reject(error); // 如果已经处理过 401 了，就直接拒绝这个错误
-            }
-            is401Handled = true; // 将标记设置为 true，表示已经处理过 401 错误
-            const res = error.response.data;
-            console.log("reject.js进来了")
-            if (res.code === '401') {
-                ElMessage({
-                    message: res.msg,
-                    type: 'warning',
+    }, error => {
+        console.log('err' + error)
+        let { message } = error;
+        if (message === "Network Error") {
+            message = "后端接口连接异常";
+            ElMessage({
+                message: message,
+                type: 'warning',
+                duration: 5 * 1000
+            });
+        } else if (message.includes("timeout")) {
+            message = "系统接口请求超时";
+            ElMessage({
+                message: message,
+                type: 'warning',
+                duration: 5 * 1000
+            });
+        }else if(message.includes("401")){
+            console.log('401：' + error)
+            if (!isRelogin.show) {
+                console.log("尚未显示登录页面")
+                isRelogin.show = true;
+                ElMessageBox.confirm('登录状态已过期，您可以继续留在该页面，或者重新登录', '系统提示', { confirmButtonText: '重新登录', cancelButtonText: '取消', type: 'warning' }).then(() => {
+                    isRelogin.show = false;
+                    sessionStorage.removeItem("token")
+                    router.push('/login');
+                }).catch(() => {
+                    isRelogin.show = false;
                 });
-                sessionStorage.removeItem("token")
-                router.push('/login');
             }
         }
-        console.log('err' + error.response) // for debug
-        return Promise.reject(error);
+        else if (message.includes("Request failed with status code")) {
+            message = "系统接口" + message.substr(message.length - 3) + "异常";
+            ElMessage({
+                message: message,
+                type: 'warning',
+                duration: 5 * 1000
+            });
+        }
+
+        return Promise.reject(error)
+
     }
 )
 

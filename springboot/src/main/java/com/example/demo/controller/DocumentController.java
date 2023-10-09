@@ -1,8 +1,8 @@
 package com.example.demo.controller;
 
-import cn.hutool.core.collection.CollUtil;
 import com.example.demo.common.DocumentQueryParam;
 import com.example.demo.common.Result;
+import com.example.demo.entity.OneWeekCreateCount;
 import com.example.demo.entity.Depart;
 import com.example.demo.entity.Document;
 import com.example.demo.entity.User;
@@ -10,21 +10,17 @@ import com.example.demo.service.DepartService;
 import com.example.demo.service.DocumentService;
 import com.example.demo.service.UserService;
 import com.example.demo.util.JwtUtils;
-import org.apache.shiro.authz.annotation.Logical;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
-import org.apache.shiro.authz.annotation.RequiresRoles;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import javax.annotation.Resource;
-import javax.print.Doc;
 import javax.servlet.http.HttpServletRequest;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @RestController
@@ -41,10 +37,38 @@ public class DocumentController {
     @Autowired
     UserService userService;
 
-    //新增图纸信息
+    //单个新增图纸信息
     //@RequiresRoles(logical = Logical.OR, value = {"superuser", "designer"})
     @PostMapping
-    public Result<?> save(@RequestBody Document document) {
+    public Result<?> save(@RequestBody Document document,HttpServletRequest request ) {
+        //获取当前用户的id 作为文件的创建者的id
+        String usernameFromToken = JwtUtils.getClaim(request.getHeader("token"),"username");
+        User userByUsername = userService.getUserByUsername(usernameFromToken);
+        Integer id = userByUsername.getId();
+        Integer parentId = userByUsername.getDepart().getParentId();
+        //根据文件上传者的身份获取他所在的事业部 并且设置为文件的所属的事业部
+        document.setDepartId(parentId);
+        //设置创建人的id
+        document.setUserId(id);
+        return documentService.insertDocument(document);
+    }
+
+    //修改新增图纸信息
+    //@RequiresRoles(logical = Logical.OR, value = {"superuser", "designer"})
+    @PostMapping("/editDocument")
+    public Result<?> edit(@RequestBody Document document,HttpServletRequest request ) {
+        //获取当前用户的id 作为文件的创建者的id
+        String usernameFromToken = JwtUtils.getClaim(request.getHeader("token"),"username");
+        User userByUsername = userService.getUserByUsername(usernameFromToken);
+        //1 首先找到待更改的文件
+        //2 判断待更改的文件是否为压缩包
+        //  如果待更改的文件为压缩包进入下一步
+        //  如果待更改的文件不是压缩包 则直接拒绝更改
+        //3 解压原来的文件 并且根据文件名称核对 解压文件中是否有要更新的文件
+        //  如果含有要更细的文件进入下一步
+        //  如果不含有待更新的文件 则直接拒绝
+        //4 复制原来的压缩包 并且起名加copy后缀 然后把待更新的文件放到copy压缩包中替代
+        //5
         return documentService.insertDocument(document);
     }
 
@@ -59,7 +83,12 @@ public class DocumentController {
         String usernameFromToken = JwtUtils.getClaim(request.getHeader("token"),"username");
         User userByUsername = userService.getUserByUsername(usernameFromToken);
         Integer id = userByUsername.getId();
+        Integer parentId = userByUsername.getDepart().getParentId();
+        //根据文件上传者的身份获取他所在的事业部 并且设置为文件的所属的事业部
+        document.setDepartId(parentId);
+
         document.setUserId(id);
+
         return documentService.insertDocument1(document);
     }
 
@@ -100,7 +129,12 @@ public class DocumentController {
         //获取当前用户的id 作为文件的更新者的id
         String usernameFromToken = JwtUtils.getClaim(request.getHeader("token"),"username");
         User userByUsername = userService.getUserByUsername(usernameFromToken);
+        //获取操作用户的用户信息
         Integer id = userByUsername.getId();
+        Integer parentId = userByUsername.getDepart().getParentId();
+        //设定更新文件的事业部id
+        document.setDepartId(parentId);
+
         document.setSubId(id);
         return documentService.updateDocumentM(document);
     }
@@ -119,7 +153,94 @@ public class DocumentController {
 
         return documentService.confirmDocument(document);
     }
+    /**
+     * @description: 此函数用于验证修改或者作废压缩包中单文件的时候 压缩包是否已经校验和开放的 如果已经开放则返回true 否则返回false
+     * @param document:
+     * @return com.example.demo.common.Result<?>
+     * @author: Zheng
+     * @date: 2023/10/7 10:33
+     */
 
+    @PostMapping("publishconfirm")
+    public Result<?> publishconfirm(@RequestBody Document document) {
+        Integer approvalStatus = document.getApprovalStatus();
+        if (approvalStatus != null && approvalStatus == 1){
+            Integer publishStatus = document.getPublishStatus();
+            if (publishStatus != null && publishStatus == 1){
+
+                return Result.success();
+            }else{
+                return Result.error("201","文件未发布，禁止对未发布文件修改");
+            }
+        }else{
+            return Result.error("201","文件未校核，禁止对未校核文件修改");
+        }
+    }
+
+    @PostMapping("/publish")
+    public Result<?> publish(@RequestBody Document document,HttpServletRequest request) {
+        String usernameFromToken = JwtUtils.getClaim(request.getHeader("token"), "username");
+        User userByUsername = userService.getUserByUsername(usernameFromToken);
+        if (userByUsername == null) {
+            // 用户不存在，处理对应的逻辑
+            return Result.error("201","审核人员用户信息出错");
+        }
+
+        // 查询审核人员的身份，根据审核人员的身份获取他所在的部门
+        Depart depart1 = userByUsername.getDepart();
+        if (depart1 == null) {
+            return Result.error("201","审核人员部门不存在");
+        }
+        Integer id1 = depart1.getId();
+
+        // 获取文件创建者的身份
+        Integer userId = document.getUserId();
+        if (userId == null) {
+            // 文件创建者的 ID 为空，处理对应的逻辑
+            return Result.error("201","文件创建者信息出错");
+        }
+
+        // 根据文件创建者的 ID 查询他所在的部门
+        User userInfolog = userService.getUserInfolog(userId);
+        if (userInfolog == null) {
+            // 文件创建者不存在，处理对应的逻辑
+            return Result.error("201","文件创建者不存在");
+        }
+        Integer departId = userInfolog.getDepartId();
+        Depart depart =  departService.getDepartById(departId);
+        if (depart == null) {
+            // 部门信息为空，处理对应的逻辑
+            return Result.error("201","文件创建者部门不存在");
+        }
+        Integer id = depart.getId();
+
+// 比较两个部门的 ID
+        if (id1 == null || id == null || !id1.equals(id)) {
+            // 部门 ID 不相等，拒绝访问，处理对应的逻辑
+            return  Result.error("201","非本部门文件禁止开放");
+        } else {
+
+            // 部门 ID 相等，通过验证，处理对应的逻辑
+            //需要判断文件记录是不是已经通过了校核和未发布
+            Integer approvalStatus = document.getApprovalStatus();
+            if (approvalStatus != null && approvalStatus == 1){
+                Integer publishStatus = document.getPublishStatus();
+                if (publishStatus != null && publishStatus == 0){
+                    //设置文件的开放状态为开放
+                    //document.setPublishStatus(1);
+                    return documentService.publishUpdate(document);
+                }else{
+                    return Result.error("201","文件已开放，禁止再次开放");
+                }
+            }else{
+                return Result.error("201","文件未校核，请先对文件进行校核");
+            }
+
+
+        }
+
+
+    }
 
     @PostMapping("/verifyPass")
     public Result<?> verifyPass(@RequestBody Document document,HttpServletRequest request) {
@@ -164,7 +285,15 @@ public class DocumentController {
             return  Result.error("201","非本部门文件禁止校核");
         } else {
             // 部门 ID 相等，通过验证，处理对应的逻辑
-            return documentService.verifyPass(document);
+            Integer approvalStatus = document.getApprovalStatus();
+            if (approvalStatus != null && approvalStatus == 0){
+
+                return documentService.verifyPass(document);
+            }else{
+                return Result.error("201","文件已审核，请勿再次审核");
+            }
+
+
         }
 
 
@@ -176,6 +305,12 @@ public class DocumentController {
         return documentService.updatestatus(document);
 
     }
+    @PostMapping("/updateDeletedstatus")
+    public Result<?> updateDeletedstatus(@RequestBody Document document) {
+        return documentService.updateDeletedstatus(document);
+
+    }
+
 
 
     /**
@@ -234,7 +369,14 @@ public class DocumentController {
                 Integer departId = user1.getDepartId();
                 //操作者的部门id和部门管理员的部门id相同则允许删除
                 if (departId == id1){
-                    return documentService.deleteDocument(Integer.parseInt(id));
+                    //部门管理员用户仅被允许删除 再删除允许时间之内的文件 即未开放的文件
+                    Integer publishStatus = document.getPublishStatus();
+                    if (publishStatus != null && publishStatus == 0){
+                        return documentService.deleteDocument(Integer.parseInt(id));
+                    }else {
+                        return  Result.error("201","文件已开放，禁止删除");
+                    }
+
                 }else{
                     return Result.error("201","非本部门文件，禁止删除");
                 }
@@ -248,20 +390,20 @@ public class DocumentController {
         } else {
 
 
-            // 将字符串转换为 LocalDateTime 对象
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            LocalDateTime targetTime = LocalDateTime.parse(createTime, formatter);
-
-            // 获取当前时间
-            LocalDateTime currentTime = LocalDateTime.now();
-
-            // 计算时间差
-            long daysBetween = ChronoUnit.DAYS.between(targetTime, currentTime);
-
-            // 判断时间差是否大于一天
-            if (daysBetween > 1) {
-                return Result.error("201", "创建时间超过一天,禁止删除");
-            }else {
+            //// 将字符串转换为 LocalDateTime 对象
+            //DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            //LocalDateTime targetTime = LocalDateTime.parse(createTime, formatter);
+            //
+            //// 获取当前时间
+            //LocalDateTime currentTime = LocalDateTime.now();
+            //
+            //// 计算时间差
+            //long daysBetween = ChronoUnit.DAYS.between(targetTime, currentTime);
+            //
+            //// 判断时间差是否大于一天
+            //if (daysBetween > 1) {
+            //    return Result.error("201", "创建时间超过一天,禁止删除");
+            //}else {
                 Result<?> documentById = documentService.getDocumentById(Integer.parseInt(id));
                 Object data = documentById.getData();
                 if (data instanceof Document) {
@@ -271,7 +413,19 @@ public class DocumentController {
 
 
                     if (userByUsername != null && userByUsername.getId() != null && userByUsername.getId().equals(userId)) {
-                        return documentService.deleteDocument(Integer.parseInt(id));
+                        Integer publishStatus = document.getPublishStatus();
+                        Integer approvalStatus = document.getApprovalStatus();
+                        //普通的设计人员也是仅被允许删除 删除允许时间之内的文件 即未开放的文件
+                        if (publishStatus != null && publishStatus == 0){
+                            if (publishStatus != null && publishStatus == 0){
+                                return documentService.deleteDocument(Integer.parseInt(id));
+                            }else {
+                                return  Result.error("201","文件已开放，禁止删除");
+                            }
+                        }else{
+                            return  Result.error("201","文件已被管理员审核，请联系部门管理员删除");
+                        }
+
                     } else {
                         return Result.error("201", "非本人资源,禁止删除");
                     }
@@ -279,7 +433,7 @@ public class DocumentController {
                     // handle error here...
                     return Result.error("201", "系统出错 删除失败");
                 }
-            }
+            //}
         }
 
 
@@ -314,8 +468,8 @@ public class DocumentController {
         for (Integer id : ids) {
             Result<?> documentById = documentService.getDocumentById(id);
             Object data = documentById.getData();
-            if (data instanceof Document document) {
-
+            if (data != null && data.getClass().equals(Document.class)) {
+                Document document = (Document) data;
                 // 获取文件创建者的身份
                 Integer userId = document.getUserId();
                 if (userId == null) {
@@ -401,7 +555,8 @@ public class DocumentController {
         for (Integer id : ids) {
             Result<?> documentById = documentService.getDocumentById(id);
             Object data = documentById.getData();
-            if (data instanceof Document document) {
+            if (data != null && data.getClass().equals(Document.class)) {
+                Document document = (Document) data;
                 if (userByUsername != null && document.getUserId().equals(userByUsername.getId())){
                     //如果操作人和文件的创建人一致 则删除文件并且把文件的的文件路径保存起来
                     successPaths.add(document.getDocumentPath());
@@ -452,11 +607,27 @@ public class DocumentController {
             //如果获取用户信息失败 说明无法获取操作人的用户信息
             return Result.error("201", "获取用户参数失败");
         }else{
+
+            //验证操作用户所属的部门 如果用户所在的部门属于两个事业部 则应该先验证对应的事业部
+            //如果操作用户所属的部门 不属于两个事业部 则只需要验证用户的身份就可以了
+            Integer parentId = userByUsername.getDepart().getParentId();
+            Depart departByparentId = departService.getDepartById(parentId);
+            String departKey = departByparentId.getDepartKey();
+            //如果查出来的用户的部门的父部门是物联网事业部或者新能源事业部 则需要把这个父id parentId设置到查询的条件类中
+            if ("IOTB".equals(departKey) || "NETB".equals(departKey)){
+                documentQueryParam.setDepartId(parentId);
+            }
+
+
+
             //查询用户的角色
             String roleKey = userByUsername.getRole().getRoleKey();
+
+            //如果这个用户是一个非设计部门的人员 包括两个事业部的非设计人员和其他综合部门的非设计人员 必须设置它们只能看审核完并且开发的文件
             if ("regular_user".equals(roleKey)){
                 //如果用户是普通用户设置查询实体中的approvalStatus的值为1 否则则设置该字段为null
                 documentQueryParam.setApprovalStatus(1);
+                documentQueryParam.setPublishStatus(1);
             }else{
                 documentQueryParam.setApprovalStatus(null);
             }
@@ -497,4 +668,47 @@ public class DocumentController {
         Result<?> filePaths = documentService.getFilePath(itemNo,documentTypeList);
         return filePaths;
     }
+
+    //根据部门查询一周的创建的文件的数量
+    @GetMapping("/getOneWeekInfoList/{departId}")
+    public Result<?> getOneWeekInfoList(@PathVariable(value = "departId") Integer departId) {
+        LocalDate currentDate = LocalDate.now();
+        LocalDate oneWeekAgo = currentDate.minusDays(6);
+
+        List<OneWeekCreateCount> oneWeekCreateCountList = new ArrayList<>();
+
+        LocalDate localDate = oneWeekAgo;
+        while (localDate.isBefore(currentDate.plusDays(1))) {
+            int value = documentService.selectByOneDate(Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant()),departId);
+            oneWeekCreateCountList.add(new OneWeekCreateCount(Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant()), value));
+            localDate = localDate.plusDays(1);
+        }
+
+        return Result.success(oneWeekCreateCountList) ;
+    }
+
+    //根据部门查询一周的创建的文件的数量
+    @GetMapping("/getLastWeekPublishList/{departId}")
+    public Result<?> getLastWeekPublishList(@PathVariable(value = "departId") Integer departId) {
+        LocalDate currentDate = LocalDate.now();
+        LocalDate oneWeekAgo = currentDate.minusDays(6);
+
+        List<OneWeekCreateCount> oneWeekPublishCountList = new ArrayList<>();
+
+        LocalDate localDate = oneWeekAgo;
+        while (localDate.isBefore(currentDate.plusDays(1))) {
+            int value = documentService.selectPublishByOneDate(Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant()),departId);
+            oneWeekPublishCountList.add(new OneWeekCreateCount(Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant()), value));
+            localDate = localDate.plusDays(1);
+        }
+
+        return Result.success(oneWeekPublishCountList) ;
+    }
+
+    //根据各种类型文件的数量
+    @GetMapping("/getTypeDistribution")
+    public Result<?> getTypeDistribution() {
+        return Result.success( documentService.selectTypeDistribution()) ;
+    }
+
 }

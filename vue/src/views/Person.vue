@@ -151,9 +151,23 @@ export default {
             console.log(res)
             if (res.code === '0') {
               ElMessage({
-                message: "修改成功",
+                message: "修改成功，请重新登录",
                 type: 'success',
               })
+              // 修改信息成功之后向后端发送退出登录请求
+              request.post("/logout").then((res) => {
+                if (res.code === "0") {
+                  // 清除本地存储的用户认证信息
+                  sessionStorage.removeItem("token");
+                  // 跳转到登录页面
+                  this.$router.push("/login");
+                } else {
+                  ElMessage({
+                    message: res.msg,
+                    type: 'error',
+                  })
+                }
+              });
 
             } else {
               ElMessage({
